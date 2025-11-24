@@ -36,7 +36,7 @@ class StarCCMDataAnalysis():
         print(f'[INFO] {file_name1} 和 {file_name2} 的压力差为{delta}')
         return delta
 
-    def get_value(self, file_name):
+    def get_value(self, file_name, bool_mean=True):
         '''
         获取CSV表最后一行的值
         :param path:
@@ -45,8 +45,12 @@ class StarCCMDataAnalysis():
         '''
         csv = CSV(self.path, file_name)
         df = csv.read()
-        print(f'[INFO] {file_name} 数值为{df.iloc[-1,1]}')
-        return df.iloc[-1,1]
+        if bool_mean:
+            res = df.iloc[-400:, 1].mean()
+        else:
+            res = df.iloc[-1, 1]
+        # print(f'[INFO] {file_name} 数值为{res}')
+        return res
 
 if __name__ == '__main__':
     path = r'D:\1_Work\active\202510_ATN021\simulation\grid_independence\level_2'
