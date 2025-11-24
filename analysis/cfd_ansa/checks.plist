@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plist filecontents="Templates">
+  <dict>
+    <key>Imported_STL_mesh</key>
+    <dict>
+      <key>checks</key>
+      <array>
+        <dict>
+          <key>name</key>
+          <string>Mesh: Single Bounds</string>
+          <key>executionMode</key>
+          <int>4</int>
+          <key>active</key>
+          <int>1</int>
+          <key>param_order</key>
+          <string/>
+          <key>params</key>
+          <dict/>
+        </dict>
+      </array>
+      <key>info</key>
+      <string>Checks to be performed on an input STL mesh before proceeding with remeshing</string>
+      <key>errors</key>
+      <array/>
+    </dict>
+  </dict>
+</plist>
