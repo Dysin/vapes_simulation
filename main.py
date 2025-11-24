@@ -21,5 +21,6 @@ if __name__ == '__main__':
     print(flow_rates)
     workflow.rans_spf_user_flow_rates(
         flow_rates=flow_rates,
-        mesh_user_name=mesh_user_name
+        mesh_user_name=mesh_user_name,
+        star_num=3
     )

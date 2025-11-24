@@ -210,8 +210,8 @@ class ReportLatex(object):
             'draw_resistance_exp_vs_sim',
             x=sim_x_list,
             y=sim_y_list,
-            label_x='Flow Rate[mL/s]',
-            label_y='Draw Resistance[Pa]',
+            label_x='Flow Rate(mL/s)',
+            label_y='Draw Resistance(Pa)',
             figure_size=(14, 9)
         )
         image_manager.plt_curve_with_points(

@@ -175,8 +175,7 @@ class Workflow:
         self.export_config()
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_airway_proj)
-        # basic_flow_rates = [17.5, 20.5, 22.5]
-        basic_flow_rates = [30.5, 35.5, 40.5]
+        basic_flow_rates = [17.5, 20.5, 22.5]
         for i in range(0, len(basic_flow_rates)):
             mesh_name, case_name = self.naming_conventions(
                 basic_flow_rates[i],
