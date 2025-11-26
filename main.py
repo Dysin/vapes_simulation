@@ -8,19 +8,23 @@ import numpy as np
 from main_workflow.workflow import Workflow
 
 if __name__ == '__main__':
-    vape_name = 'VP325-B'
-    ver_num = '20251103'
-    mesh_user_name = 'level2'
+    vape_name = 'VP346'
+    ver_num = '20251125'
+    mesh_user_name = 'level2_minlet'
     workflow = Workflow(vape_name, ver_num)
-    # workflow.rans_spf_basic_flow_rates(mesh_user_name)
+    workflow.rans_spf_basic_flow_rates(mesh_user_name)
 
     basic_flow_rates = [17.5, 20.5, 22.5]
     flow_rates = np.arange(25, 45, 2.5).tolist()
     flow_rates += basic_flow_rates
     flow_rates = sorted(set(flow_rates))
     print(flow_rates)
-    workflow.rans_spf_user_flow_rates(
-        flow_rates=flow_rates,
-        mesh_user_name=mesh_user_name,
-        star_num=3
-    )
+    # workflow.rans_spf_user_flow_rates(
+    #     flow_rates=flow_rates,
+    #     mesh_user_name=mesh_user_name,
+    #     star_num=3
+    # )
+    # workflow.rans_spf_experiment_compare(
+    #     flow_rates=flow_rates,
+    #     mesh_user_name=mesh_user_name
+    # )

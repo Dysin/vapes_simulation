@@ -7,6 +7,8 @@
 import csv
 import sys
 import numpy as np
+
+from geometry.geometry_utils import GeometryUtils
 from utils.params_manager import *
 from utils.files import Files
 from analysis.cfd_starccm.starccm_simulation import *
@@ -34,28 +36,42 @@ class Workflow:
             os.makedirs(path, exist_ok=True)
             sys.exit(f"[ERROR] 路径不存在，已自动创建：{path}")
 
-    def export_config(self):
+    def export_config(
+            self,
+            mesh_folder='origin'
+    ):
         """
             将电子烟结构参数写入 CSVUtils 文件。
             参数:
                 save_path (str): CSVUtils 文件保存路径（包含文件名，如 "D:/configure.csv"）
         """
+        # path_mesh = os.path.join(self.pm.path_mesh, mesh_folder)
+        # geometry_utils = GeometryUtils(path_mesh)
+        # area_outlet = geometry_utils.get_stl_area(f'{self.ver_num}_airway_outlet') * 1.0e6
+        # area_inlet = geometry_utils.get_stl_area(f'{self.ver_num}_airway_inlet') * 1.0e6
+        # geometry_utils.get_stl_points(f'{self.ver_num}_airway_outlet')
+        # ato_dir, cos_normal = geometry_utils.detect_plane_orientation(f'{self.ver_num}_airway_outlet')
+        # box_params = geometry_utils.get_stl_bounding_box(f'{self.ver_num}_airway_atomizer_core')
+        # print(f'[INFO] 出气口面积：{area_outlet:.2f} mm^2')
+        # print(f'[INFO] 进气口面积：{area_inlet:.2f} mm^2')
+        # print(f'[INFO] 雾化芯方向: {ato_dir}')
+
         path_config = os.path.join(self.pm.path_data, 'configure.csv')
         if not os.path.exists(path_config):
             # 确保目录存在
             os.makedirs(os.path.dirname(path_config), exist_ok=True)
             # 要写入的数据
             data = [
-                ["变量", "值"],
-                ["进气口面积（mm^2）", 0],
-                ["出气口面积（mm^2）", 0],
-                ["雾化区长度（mm）", 0],
-                ["雾化区内径（mm）", 0],
-                ["雾化芯到出气口长度（mm）", 0],
-                ["雾化区入口位置（mm）", 0],
-                ["雾化区出口位置（mm）", 0],
-                ["雾化芯方向", "y"],
-                ["电子烟类型", "一次性"]
+                ['变量', '值'],
+                ['进气口面积（mm^2）', 0],
+                ['出气口面积（mm^2）', 0],
+                ['雾化区长度（mm）', 0],
+                ['雾化区内径（mm）', 0],
+                ['雾化芯到出气口长度（mm）', 0],
+                ['雾化区入口位置（mm）', 0],
+                ['雾化区出口位置（mm）', 0],
+                ['雾化芯方向', 'y'],
+                ['电子烟类型', '一次性']
             ]
             # 写入 CSVUtils
             with open(path_config, "w", newline='', encoding="utf-8-sig") as f:
@@ -135,12 +151,12 @@ class Workflow:
                 atomization_area_dir=params_str.ato_direction
             )
             starccm.run(new=True)
+        if bool_post:
             if bool_res:
                 starccm_res = StarCCMDataAnalysis(path_sim)
                 starccm_res.plt_curve('pressure_ave_inlet')
                 starccm_res.plt_curve('pressure_ave_outlet')
                 starccm_res.plt_curve('pressure_ave_airflow_sensor')
-        if bool_post:
             path_report = os.path.join(self.pm.path_reports, case_name)
             vape_post(
                 path_geo=path_mesh,
@@ -234,6 +250,56 @@ class Workflow:
                 bool_res=False,
                 report_folder=case_name
             )
+
+    def rans_spf_experiment_compare(
+            self,
+            flow_rates=None,
+            mesh_user_name=None
+    ):
+        get_params = GetParams()
+        params_str = get_params.structure_config(self.path_airway_proj)
+        basic_flow_rates = [17.5, 20.5, 22.5]
+        for i in range(0, len(basic_flow_rates)):
+            mesh_name, case_name = self.naming_conventions(
+                basic_flow_rates[i],
+                mesh_user_name
+            )
+            self.airway_simulation_and_post(
+                flow_rate=basic_flow_rates[i],
+                mesh_folder='origin',
+                user_name=mesh_user_name,
+                bool_sim=False,
+                bool_post=True,
+                bool_res=True,
+                report_folder=case_name
+            )
+
+        if mesh_user_name is None:
+            report_floder = f'{self.ver_num}_rans_spf_experiment_compare'
+        else:
+            report_floder = f'{self.ver_num}_{mesh_user_name}_rans_spf_experiment_compare'
+        path_report = os.path.join(self.pm.path_reports, report_floder)
+        files_images = Files(self.pm.path_images)
+        geo_imgs = files_images.get_file_names_by_type('.png')
+        for geo_img in geo_imgs:
+            files_images.copy(
+                f'{geo_img}.png',
+                os.path.join(path_report, 'images')
+            )
+        report_latex = ReportLatex(
+            path_root=self.path_airway_proj,
+            folder_name=report_floder,
+            model_number=self.product_model,
+            params_structure=params_str,
+            flow_rates=basic_flow_rates,
+            version_number=self.ver_num
+        )
+        report_latex.rans_spf_comparison_flow_rates(
+            user_name=mesh_user_name,
+            bool_exp=True,
+            all_flow_rates=flow_rates
+        )
+
 
 if __name__ == '__main__':
     vape_name = 'ATN-021'
