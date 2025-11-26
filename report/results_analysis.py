@@ -65,7 +65,7 @@ class ResultsAnalysis():
         '''
         txt = ''
         for i in range(len(flow_rates)):
-            txt += f'当抽吸条件为{flow_rates[i]:.2f}mL/s时，气道入口与出口的总压力损失为{values[i]:.2f}Pa。\n\n'
+            txt += f'当抽吸条件为{flow_rates[i]:.2f}mL/s时，吸阻为{values[i]:.2f}Pa。\n\n'
         # 总结段落
         avg_loss = sum(values) / len(values)
         txt += f'综合来看，平均压力损失约为 {avg_loss:.2f} Pa。'
@@ -109,3 +109,62 @@ class ResultsAnalysis():
                 '压力损失过大，较难启动。强烈建议对咪头与烟嘴连接处进行大幅度调整，减小压力损失。\n\n'
             )
         return txt
+
+    def default_flow_rates_pressure(
+            self,
+            total_pressure_sensors,
+            total_pressure_losses,
+            sensor_pressure_losses
+    ):
+        '''
+        不同默认抽吸条件下的总压及总压损失分析
+        :param total_pressure_sensors: 咪头总压
+        :param total_pressure_losses: 吸阻
+        :param sensor_pressure_losses: 咪头至吸嘴压降
+        :return:
+        '''
+        flow_rates = [17.5, 20.5, 22.5]
+        txt = ''
+        for i in range(len(flow_rates)):
+            txt += (
+                f'当抽吸条件为{flow_rates[i]:.2f}mL/s时，'
+                f'吸阻为{total_pressure_losses[i]:.2f}Pa，'
+                f'咪头处平均压力为{total_pressure_sensors[i]:.2f}Pa，'
+            )
+            if sensor_pressure_losses[i] > -100:
+                txt += '此时咪头不启动（咪头启动阈值[-200, -100]）。\n\n'
+            else:
+                txt += '此时咪头可启动（咪头启动阈值[-200, -100]）。\n\n'
+        # 总结段落
+        avg_loss = sum(total_pressure_losses) / len(flow_rates)
+        txt += f'综合来看，平均压力损失约为 {avg_loss:.2f} Pa。'
+        if avg_loss < 200:
+            txt += '压力损失较小，吸阻较低，气流顺畅，用户体验较为轻盈。\n'
+        elif 200 <= avg_loss < 300:
+            txt += '整体气道设计合理，吸阻略有感但较为舒适。\n'
+        elif 300 <= avg_loss < 500:
+            txt += '整体吸阻略偏重，可通过微调气道结构进一步优化。\n'
+        elif 500 <= avg_loss < 700:
+            txt += '整体吸阻明显，建议优化气道截面或减少局部收缩区域，以降低压降。\n'
+        else:
+            txt += '整体吸阻较大，需显著优化气道结构（如扩大截面、优化流线过渡）\n'
+        avg_loss_total = sum(total_pressure_losses) / len(total_pressure_losses)
+        avg_loss_sensor = sum(sensor_pressure_losses) / len(sensor_pressure_losses)
+        ratio = avg_loss_sensor / avg_loss_total * 100
+        txt = f'咪头与出口的平均总压力损失为{avg_loss_sensor:.2f}Pa，占平均吸阻的比例为{ratio:.2f}\\%，'
+        if ratio < 25:
+            txt += (
+                '启动灵敏。\n\n'
+            )
+        elif 25 <= ratio < 50:
+            txt += (
+                '启动灵敏度偏低。\n\n'
+            )
+        elif 50 <= ratio < 75:
+            txt += (
+                '压力损失较大，启动不灵敏。建议优化咪头与烟嘴的连接处设计。\n\n'
+            )
+        else:
+            txt += (
+                '压力损失过大，较难启动。强烈建议对咪头与烟嘴连接处进行大幅度调整，减小压力损失。\n\n'
+            )

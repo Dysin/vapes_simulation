@@ -195,13 +195,13 @@ class Mesh:
         print('[INFO BaseUtils] Generate [%s] mesh!' %mesh_type)
         ansa.mesh.VolumesMeshV(vols[0], "%s" %mesh_type)
 
-    def output(self, path, file_name, type):
+    def output(self, path, file_name, type, scale=0.001):
         if type == 'Fluent' or type == 'cfd_fluent' or type == 'msh':
             ansa.base.OutputFluent(
                 filename = os.path.join(path, file_name + '.msh'),
                 mode = 'visible',
                 format = 'ascii',
-                scale = 0.001
+                scale = scale
             )
         elif type == 'nas':
             ansa.base.OutputNastran(
@@ -212,7 +212,8 @@ class Mesh:
             ansa.base.OutputStereoLithography(
                 filename=os.path.join(path, file_name + '.stl'),
                 mode = 'visible',
-                format = 'ascii'
+                format = 'ascii',
+                scale = scale
             )
 
 class MorphUtils:

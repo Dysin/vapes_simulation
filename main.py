@@ -8,9 +8,9 @@ import numpy as np
 from main_workflow.workflow import Workflow
 
 if __name__ == '__main__':
-    vape_name = 'VP346'
+    vape_name = 'VP218-E'
     ver_num = '20251125'
-    mesh_user_name = 'level2_minlet'
+    mesh_user_name = None
     workflow = Workflow(vape_name, ver_num)
     workflow.rans_spf_basic_flow_rates(mesh_user_name)
 

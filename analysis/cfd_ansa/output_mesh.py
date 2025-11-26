@@ -6,30 +6,49 @@
 
 from ansa_utils import *
 
-def output_mesh(path, project_name):
+def output_mesh(path, mesh_name):
     ansa_utils = BaseUtils()
     ansa_utils.open_file(
         path = path,
-        file_name = project_name,
-        file_type = 'ansa'
+        file_name = mesh_name
     )
     mesh_utils = Mesh()
     mesh_utils.output(
         path = path,
-        file_name = project_name + '_flow',
+        file_name = mesh_name,
         type = 'nas'
     )
     pshells = Entities('PSHELL')
-    pshell_outlet = pshells.get_entity(2)
-    ansa.base.Or(pshell_outlet)
-    mesh_utils.output(
-        path=path,
-        file_name=project_name + '_outlet',
-        type='stl'
-    )
+    pshells_all = pshells.entities_all()
+
+    for pshell in pshells_all:
+        print(pshell._name)
+        if pshell._name == 'outlet':
+            pshell = pshells.get_entity(pshell._id)
+            ansa.base.Or(pshell)
+            mesh_utils.output(
+                path=path,
+                file_name=mesh_name + '_outlet',
+                type='stl'
+            )
+        elif pshell._name == 'inlet':
+            pshell = pshells.get_entity(pshell._id)
+            ansa.base.Or(pshell)
+            mesh_utils.output(
+                path=path,
+                file_name=mesh_name + '_inlet',
+                type='stl'
+            )
+        elif pshell._name == 'atomizer_core':
+            pshell = pshells.get_entity(pshell._id)
+            ansa.base.Or(pshell)
+            mesh_utils.output(
+                path=path,
+                file_name=mesh_name + '_atomizer_core',
+                type='stl'
+            )
 
 if __name__ == '__main__':
-    project_name = 'VP317E'
-    path_root = r'D:\1_Work\active'
-    path_mesh = os.path.join(path_root, 'project', project_name, 'mesh')
-    output_mesh(path_mesh, project_name)
+    mesh_name = '20251126_bomb1_airway'
+    path_mesh = r'E:\1_Work\active\airway_analysis\VP218E\mesh\origin'
+    output_mesh(path_mesh, mesh_name)

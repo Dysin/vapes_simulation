@@ -21,4 +21,5 @@ def geometry_process():
 	ansa_utils.new_pid(2, 'outlet')
 	ansa_utils.new_pid(3, 'airflow_sensor')
 	ansa_utils.new_pid(4, 'wall')
+	ansa_utils.new_pid(5, 'atomizer_core')
 	print('[INFO] Finished!!!')

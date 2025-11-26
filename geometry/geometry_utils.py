@@ -7,6 +7,7 @@
 import os
 import trimesh
 import numpy as np
+from scipy.spatial import ConvexHull, distance_matrix
 
 class GeometryUtils:
     def __init__(self, path):
@@ -39,7 +40,7 @@ class GeometryUtils:
                 'size_y': max_coords[1] - min_coords[1],
                 'size_z': max_coords[2] - min_coords[2],
             }
-            print(f'[INFO] 几何包围盒尺寸：{box_params}')
+            # print(f'[INFO] 几何包围盒尺寸：{box_params}')
         except Exception as e:
             print(f"处理 STL 文件时出错: {str(e)}")
             return None
@@ -124,6 +125,64 @@ class GeometryUtils:
             return "z", avg_normal
         else:
             return "UNKNOWN", avg_normal
+
+    def get_cylinder_diameter(
+            self,
+            stl_name
+    ):
+        '''
+        根据圆柱STL计算其直径
+        :param stl_name:
+        :return:
+        '''
+        # 1. load mesh
+        stl_file = os.path.join(self.path, f'{stl_name}.stl')
+        mesh = trimesh.load_mesh(stl_file, process=True)  # process 合并/修复
+        if mesh.is_empty:
+            raise ValueError("加载的网格为空")
+        # use vertex coordinates
+        pts = mesh.vertices.copy()
+        # remove NaN/Inf and duplicates
+        mask = np.isfinite(pts).all(axis=1)
+        pts = pts[mask]
+        if pts.shape[0] < 10:
+            raise ValueError("顶点太少，无法计算")
+        # optionally unique
+        # round to avoid tiny numerical duplicates
+        pts = np.unique(np.round(pts, 10), axis=0)
+        # 2. PCA via SVD to find principal directions
+        center = pts.mean(axis=0)
+        X = pts - center
+        # SVD
+        U, S, Vt = np.linalg.svd(X, full_matrices=False)
+        # Vt[0] is direction of largest variance -> cylinder axis
+        axis = Vt[0]
+        axis = axis / np.linalg.norm(axis)
+        # 3. make two orthonormal vectors perpendicular to axis
+        # pick arbitrary vector not parallel to axis
+        arbitrary = np.array([1.0, 0.0, 0.0])
+        if abs(np.dot(arbitrary, axis)) > 0.9:
+            arbitrary = np.array([0.0, 1.0, 0.0])
+        u = np.cross(axis, arbitrary)
+        u /= np.linalg.norm(u)
+        v = np.cross(axis, u)
+        v /= np.linalg.norm(v)
+        # Project points into the plane spanned by u,v (2D coordinates)
+        proj = np.vstack((pts.dot(u), pts.dot(v))).T  # shape (N,2)
+        # 4. convex hull of projection
+        try:
+            hull = ConvexHull(proj)
+            hull_pts = proj[hull.vertices]
+        except Exception as e:
+            # if convex hull fails (e.g., degenerate), fallback to all points
+            hull_pts = proj
+        # compute pairwise distances on hull points and take max -> diameter
+        if hull_pts.shape[0] < 2:
+            raise ValueError("投影点太少，无法计算直径")
+        dists = distance_matrix(hull_pts, hull_pts)
+        diameter = dists.max()
+        # also return estimated axis and center for debugging
+        return float(diameter), center
 
 if __name__ == '__main__':
     geo_utils = GeometryUtils(r'D:\1_Work\active\202510_ATN021\mesh')

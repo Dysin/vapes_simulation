@@ -481,6 +481,7 @@ class ReportLatex(object):
             ['Proudman最大声功率(dB)']
         ]
 
+        total_pressure_sensors = []
         total_pressure_losses = []
         sensor_pressure_losses = []
         # 逐个流率计算并填入对应列
@@ -489,6 +490,7 @@ class ReportLatex(object):
             results = GetParams().simulation(path_results)
             total_pressure_losses.append(results.delta_p_flow)
             sensor_pressure_losses.append(results.delta_p_sensor)
+            total_pressure_sensors.append(results.total_pressure_ave_sensor)
 
             # 向每一行添加当前流率的计算结果
             table_data_cfd_main[1].append(f'{results.velocity_ave_inlet:.2f}')
@@ -532,14 +534,10 @@ class ReportLatex(object):
         )
 
         code += '\\textbf{简要说明：}\n\n'
-        code +=  self.results_analysis.total_pressure_losses(
+        code += self.results_analysis.default_flow_rates_pressure(
+            total_pressure_sensors,
             total_pressure_losses,
-            self.flow_rates
-        )
-        code += self.results_analysis.sensor_pressure_losses(
-            total_pressure_losses,
-            sensor_pressure_losses,
-            self.flow_rates
+            sensor_pressure_losses
         )
 
         code += '不同体积流率气道内流场其他特性如下表所示：\n\n'
