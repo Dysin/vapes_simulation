@@ -17,7 +17,7 @@ from analysis.cfd_tecplot.starccm_post import vape_post
 from report.latex import ReportLatex
 
 class Workflow:
-    def __init__(self, product_model, version_number):
+    def __init__(self, product_model, version_number, mesh_folder='origin'):
         self.product_model = product_model # 产品型号
         self.proj_name = product_model.replace('-', '') # 项目名
         self.ver_num = version_number # 版本号，如20251010
@@ -25,6 +25,7 @@ class Workflow:
         self.path_airway = os.path.join(self.path_root, 'airway_analysis')
         self.path_airway_proj = os.path.join(self.path_airway, self.proj_name)
         self.pm = PathManager(self.path_airway_proj, True)
+        self.mesh_folder = mesh_folder
 
     def check_exist(self, path):
         '''
@@ -38,77 +39,78 @@ class Workflow:
 
     def export_config(
             self,
-            mesh_folder='origin'
+            user_name,
+            vape_type
     ):
         """
             将电子烟结构参数写入 CSVUtils 文件。
             参数:
                 save_path (str): CSVUtils 文件保存路径（包含文件名，如 "D:/configure.csv"）
         """
-        path_mesh = os.path.join(self.pm.path_mesh, mesh_folder)
-        geometry_utils = GeometryUtils(path_mesh)
-        area_outlet = geometry_utils.get_stl_area(f'{self.ver_num}_airway_outlet') * 1.0e6
-        area_inlet = geometry_utils.get_stl_area(f'{self.ver_num}_airway_inlet') * 1.0e6
-        outlet_points = geometry_utils.get_stl_points(f'{self.ver_num}_airway_outlet')
-        ato_dir, cos_normal = geometry_utils.detect_plane_orientation(f'{self.ver_num}_airway_outlet')
-        box_params = geometry_utils.get_stl_bounding_box(f'{self.ver_num}_airway_atomizer_core')
-        ato_diameter, ato_center = geometry_utils.get_cylinder_diameter(f'{self.ver_num}_airway_atomizer_core')
-
-        ato_epsilon = 5.0e-5
-        # 取方向轴 index
-        axis_map = {'x': 'x', 'y': 'y', 'z': 'z'}
-        axis = axis_map.get(ato_dir, 'y')  # 默认 y
-        # 获取当前方向的 min/max
-        min_v = box_params[f'min_{axis}']
-        max_v = box_params[f'max_{axis}']
-        outlet_coord = outlet_points[0][ {'x':0,'y':1,'z':2}[axis] ]
-        # 判断方向：outlet 在 min 的正侧 or 负侧
-        positive = outlet_coord - min_v > 0
-        if positive:
-            ato_direction = axis
-            ato_inlet_coord = (min_v + ato_epsilon) * 1.0e3
-            ato_outlet_coord = (max_v - ato_epsilon) * 1.0e3
-            ato_to_outlet_length = (outlet_coord - max_v) * 1.0e3
-        else:
-            ato_direction = f'-{axis}'
-            ato_inlet_coord = (max_v - ato_epsilon) * 1.0e3
-            ato_outlet_coord = (min_v + ato_epsilon) * 1.0e3
-            ato_to_outlet_length = (outlet_coord - min_v) * 1.0e3
-        # 公共部分
-        ato_length = abs(max_v - min_v) * 1.0e3
-
-        print(f'[INFO] 出气口面积：{area_outlet:.2f} mm^2')
-        print(f'[INFO] 进气口面积：{area_inlet:.2f} mm^2')
-        print(f'[INFO] 雾化芯方向: {ato_direction}')
-        print(f'[INFO] 雾化区长度：{ato_length:.2f} mm')
-        print(f'[INFO] 雾化区直径：{ato_diameter * 1.0e3:.2f} mm')
-        print(f'[INFO] 雾化区入口位置：{ato_inlet_coord:.2f} mm')
-        print(f'[INFO] 雾化区出口位置：{ato_outlet_coord:.2f} mm')
-        print(f'[INFO] 雾化芯到出气口长度：{ato_to_outlet_length:.2f} mm')
+        name = f'{self.ver_num}_{user_name}'
+        path_mesh = os.path.join(self.pm.path_mesh, self.mesh_folder)
 
         path_config = os.path.join(self.pm.path_data, 'configure.csv')
         if not os.path.exists(path_config):
+            geometry_utils = GeometryUtils(path_mesh)
+            area_outlet = geometry_utils.get_stl_area(f'{name}_airway_outlet') * 1.0e6
+            area_inlet = geometry_utils.get_stl_area(f'{name}_airway_inlet') * 1.0e6
+            outlet_points = geometry_utils.get_stl_points(f'{name}_airway_outlet')
+            ato_dir, cos_normal = geometry_utils.detect_plane_orientation(f'{name}_airway_outlet')
+            box_params = geometry_utils.get_stl_bounding_box(f'{name}_airway_atomizer_core')
+            ato_diameter, ato_center = geometry_utils.get_cylinder_diameter(f'{name}_airway_atomizer_core')
+
+            ato_epsilon = 5.0e-5
+            # 取方向轴 index
+            axis_map = {'x': 'x', 'y': 'y', 'z': 'z'}
+            axis = axis_map.get(ato_dir, 'y')  # 默认 y
+            # 获取当前方向的 min/max
+            min_v = box_params[f'min_{axis}']
+            max_v = box_params[f'max_{axis}']
+            outlet_coord = outlet_points[0][{'x': 0, 'y': 1, 'z': 2}[axis]]
+            # 判断方向：outlet 在 min 的正侧 or 负侧
+            positive = outlet_coord - min_v > 0
+            if positive:
+                ato_direction = axis
+                ato_inlet_coord = (min_v + ato_epsilon) * 1.0e3
+                ato_outlet_coord = (max_v - ato_epsilon) * 1.0e3
+                ato_to_outlet_length = (outlet_coord - max_v) * 1.0e3
+            else:
+                ato_direction = f'-{axis}'
+                ato_inlet_coord = (max_v - ato_epsilon) * 1.0e3
+                ato_outlet_coord = (min_v + ato_epsilon) * 1.0e3
+                ato_to_outlet_length = (outlet_coord - min_v) * 1.0e3
+            # 公共部分
+            ato_length = abs(max_v - min_v) * 1.0e3
+
+            print(f'[INFO] 出气口面积：{area_outlet:.2f} mm^2')
+            print(f'[INFO] 进气口面积：{area_inlet:.2f} mm^2')
+            print(f'[INFO] 雾化芯方向: {ato_direction}')
+            print(f'[INFO] 雾化区长度：{ato_length:.2f} mm')
+            print(f'[INFO] 雾化区直径：{ato_diameter * 1.0e3:.2f} mm')
+            print(f'[INFO] 雾化区入口位置：{ato_inlet_coord:.2f} mm')
+            print(f'[INFO] 雾化区出口位置：{ato_outlet_coord:.2f} mm')
+            print(f'[INFO] 雾化芯到出气口长度：{ato_to_outlet_length:.2f} mm')
             # 确保目录存在
             os.makedirs(os.path.dirname(path_config), exist_ok=True)
             # 要写入的数据
             data = [
                 ['变量', '值'],
-                ['进气口面积（mm^2）', 0],
-                ['出气口面积（mm^2）', 0],
-                ['雾化区长度（mm）', 0],
-                ['雾化区内径（mm）', 0],
-                ['雾化芯到出气口长度（mm）', 0],
-                ['雾化区入口位置（mm）', 0],
-                ['雾化区出口位置（mm）', 0],
-                ['雾化芯方向', 'y'],
-                ['电子烟类型', '一次性']
+                ['进气口面积（mm^2）', f'{area_inlet:.2f}'],
+                ['出气口面积（mm^2）', f'{area_outlet:.2f}'],
+                ['雾化区长度（mm）', f'{ato_length:.2f}'],
+                ['雾化区内径（mm）', f'{ato_diameter * 1.0e3:.2f}'],
+                ['雾化芯到出气口长度（mm）', f'{ato_to_outlet_length:.2f}'],
+                ['雾化区入口位置（mm）', f'{ato_inlet_coord:.2f}'],
+                ['雾化区出口位置（mm）', f'{ato_outlet_coord:.2f}'],
+                ['雾化芯方向', ato_direction],
+                ['电子烟类型', vape_type]
             ]
             # 写入 CSVUtils
             with open(path_config, "w", newline='', encoding="utf-8-sig") as f:
                 writer = csv.writer(f)
                 writer.writerows(data)
             sys.exit(f'[ERROR] 文件不存在，已自动创建：{path_config}')
-        sys.exit('[STOP]')
 
     def naming_conventions(self, flow_rate, user_name):
         '''
@@ -132,7 +134,6 @@ class Workflow:
     def airway_simulation_and_post(
             self,
             flow_rate=17.5,
-            mesh_folder='origin',
             user_name=None,
             bool_sim=True,
             bool_post=True,
@@ -143,7 +144,7 @@ class Workflow:
         气道仿真及后处理分析
         :return:
         '''
-        path_mesh = os.path.join(self.pm.path_mesh, mesh_folder)
+        path_mesh = os.path.join(self.pm.path_mesh, self.mesh_folder)
         self.check_exist(path_mesh)
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_airway_proj)
@@ -169,7 +170,7 @@ class Workflow:
                 part_name='airway',
                 flow_rate=flow_rate,
                 outlet_area=params_str.outlet_area,
-                max_step=1000,
+                max_step=800,
                 bool_gen_mesh=True,
                 target_mesh_size=target_size,
                 min_mesh_size=min_size,
@@ -218,8 +219,8 @@ class Workflow:
             report_latex.convert_images()
             report_latex.rans_spf_single(case_name)
 
-    def rans_spf_basic_flow_rates(self, mesh_user_name=None):
-        self.export_config()
+    def rans_spf_default_flow_rates(self, vape_type, mesh_user_name=None):
+        self.export_config(mesh_user_name, vape_type)
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_airway_proj)
         basic_flow_rates = [17.5, 20.5, 22.5]
@@ -230,7 +231,6 @@ class Workflow:
             )
             self.airway_simulation_and_post(
                 flow_rate=basic_flow_rates[i],
-                mesh_folder='origin',
                 user_name=mesh_user_name,
                 bool_sim=True,
                 bool_post=True,
@@ -274,7 +274,6 @@ class Workflow:
             )
             self.airway_simulation_and_post(
                 flow_rate=flow_rates[i],
-                mesh_folder='origin',
                 user_name=mesh_user_name,
                 bool_sim=True,
                 bool_post=False,
@@ -297,7 +296,6 @@ class Workflow:
             )
             self.airway_simulation_and_post(
                 flow_rate=basic_flow_rates[i],
-                mesh_folder='origin',
                 user_name=mesh_user_name,
                 bool_sim=False,
                 bool_post=True,
@@ -334,10 +332,11 @@ class Workflow:
 
 if __name__ == '__main__':
     vape_name = 'VP218-E'
-    ver_num = '20251125'
-    mesh_user_name = None
+    ver_num = '20251126'
+    mesh_user_name = 'bomb1'
+    vape_type = '一次性'
     workflow = Workflow(vape_name, ver_num)
-    workflow.rans_spf_basic_flow_rates()
+    workflow.rans_spf_default_flow_rates(vape_type, mesh_user_name)
 
     flow_rates = np.arange(17.5, 30, 2.5).tolist()
     print(flow_rates)

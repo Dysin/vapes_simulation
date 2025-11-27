@@ -11,6 +11,23 @@ from analysis.cfd_tecplot.tecplot_post import *
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
 from geometry.geometry_utils import GeometryUtils
 
+def unique_with_precision(value_list, min_prec=5, max_prec=7):
+    """
+    对 value_list 中的浮点数按指定精度进行 round，从 min_prec 开始逐步增加精度，
+    直到结果不出现重复，或达到最大精度 max_prec。
+    返回：处理后的列表（与输入长度一致）
+    """
+    # 输入检查（可选）
+    if not value_list:
+        return []
+    for prec in range(min_prec, max_prec + 1):
+        rounded_values = [round(v, prec) for v in value_list]
+        # 如果无重复 → 返回当前精度结果
+        if len(set(rounded_values)) == len(value_list):
+            return rounded_values
+    # 最终精度仍有重复 → 返回 max_prec 的结果
+    return rounded_values
+
 def starccm_post(
         path_geo, # 几何路径
         path_post, # 算例路径
@@ -117,8 +134,7 @@ def starccm_post(
             x_scale[1],
             8
         ))
-    print(f'[INFO] X PLANE POS: {x_plane_pos}')
-    x_plane_pos = np.round(x_plane_pos, 5)
+    x_plane_pos = unique_with_precision(x_plane_pos) # 默认保留五位小数
     content_all += slice_plane_xyz(
         path_save=path_post,
         all_zone_number=all_zone_number,
@@ -174,7 +190,7 @@ def starccm_post(
             y_scale[1],
             8
         ))
-    y_plane_pos = np.round(y_plane_pos, 5)
+    y_plane_pos = unique_with_precision(y_plane_pos)
     content_all += slice_plane_xyz(
         path_post,
         all_zone_number,
@@ -224,7 +240,7 @@ def starccm_post(
             z_scale[1],
             8
         ))
-    z_plane_pos = np.round(z_plane_pos, 5)
+    z_plane_pos = unique_with_precision(z_plane_pos)
     content_all += slice_plane_xyz(
         path_post,
         all_zone_number,
@@ -400,8 +416,8 @@ def vape_post(
             [90, 0, 0],  # y plane view
             [0, 0, 0],  # z plane view
         ]
-    all_zone_number = 5
-    show_zone_ids = [1, 2, 3, 4, 5]
+    all_zone_number = 6
+    show_zone_ids = [1, 2, 3, 4, 5, 6]
     starccm_post(
         path_geo=path_geo,
         path_post=path_post,

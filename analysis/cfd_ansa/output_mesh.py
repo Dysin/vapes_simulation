@@ -18,6 +18,11 @@ def output_mesh(path, mesh_name):
         file_name = mesh_name,
         type = 'nas'
     )
+    mesh_utils.output(
+        path=path,
+        file_name=mesh_name,
+        type='stl'
+    )
     pshells = Entities('PSHELL')
     pshells_all = pshells.entities_all()
 
@@ -49,6 +54,6 @@ def output_mesh(path, mesh_name):
             )
 
 if __name__ == '__main__':
-    mesh_name = '20251126_bomb1_airway'
-    path_mesh = r'E:\1_Work\active\airway_analysis\VP218E\mesh\origin'
+    mesh_name = '20251126_bomb1_opt03_airway'
+    path_mesh = r'E:\1_Work\active\airway_analysis\VP218E\mesh\optimization'
     output_mesh(path_mesh, mesh_name)
