@@ -47,7 +47,10 @@ class Workflow:
             参数:
                 save_path (str): CSVUtils 文件保存路径（包含文件名，如 "D:/configure.csv"）
         """
-        name = f'{self.ver_num}_{user_name}'
+        if user_name is None:
+            name = f'{self.ver_num}'
+        else:
+            name = f'{self.ver_num}_{user_name}'
         path_mesh = os.path.join(self.pm.path_mesh, self.mesh_folder)
 
         path_config = os.path.join(self.pm.path_data, 'configure.csv')
@@ -224,19 +227,19 @@ class Workflow:
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_airway_proj)
         basic_flow_rates = [17.5, 20.5, 22.5]
-        for i in range(0, len(basic_flow_rates)):
-            mesh_name, case_name = self.naming_conventions(
-                basic_flow_rates[i],
-                mesh_user_name
-            )
-            self.airway_simulation_and_post(
-                flow_rate=basic_flow_rates[i],
-                user_name=mesh_user_name,
-                bool_sim=True,
-                bool_post=True,
-                bool_res=False,
-                report_folder=case_name
-            )
+        # for i in range(0, len(basic_flow_rates)):
+        #     mesh_name, case_name = self.naming_conventions(
+        #         basic_flow_rates[i],
+        #         mesh_user_name
+        #     )
+        #     self.airway_simulation_and_post(
+        #         flow_rate=basic_flow_rates[i],
+        #         user_name=mesh_user_name,
+        #         bool_sim=True,
+        #         bool_post=True,
+        #         bool_res=False,
+        #         report_folder=case_name
+        #     )
 
         if mesh_user_name is None:
             report_floder = f'{self.ver_num}_rans_spf_flowrate_compare'
@@ -262,11 +265,12 @@ class Workflow:
 
     def rans_spf_user_flow_rates(
             self,
+            vape_type,
             flow_rates,
             star_num=0,
             mesh_user_name=None
     ):
-        self.export_config()
+        self.export_config(mesh_user_name, vape_type)
         for i in range(star_num, len(flow_rates)):
             mesh_name, case_name = self.naming_conventions(
                 flow_rates[i],
@@ -294,14 +298,14 @@ class Workflow:
                 basic_flow_rates[i],
                 mesh_user_name
             )
-            self.airway_simulation_and_post(
-                flow_rate=basic_flow_rates[i],
-                user_name=mesh_user_name,
-                bool_sim=False,
-                bool_post=True,
-                bool_res=True,
-                report_folder=case_name
-            )
+            # self.airway_simulation_and_post(
+            #     flow_rate=basic_flow_rates[i],
+            #     user_name=mesh_user_name,
+            #     bool_sim=False,
+            #     bool_post=True,
+            #     bool_res=True,
+            #     report_folder=case_name
+            # )
 
         if mesh_user_name is None:
             report_floder = f'{self.ver_num}_rans_spf_experiment_compare'

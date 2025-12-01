@@ -8,11 +8,12 @@ import numpy as np
 from main_workflow.workflow import Workflow
 
 if __name__ == '__main__':
-    vape_name = 'VP218-E'
+    vape_name = 'F01-RD03'
     ver_num = '20251126'
-    mesh_user_name = 'bomb1_opt03'
-    vape_type='一次性'
-    workflow = Workflow(vape_name, ver_num, mesh_folder='optimization')
+    mesh_user_name = None
+    vape_type='换弹'
+    # workflow = Workflow(vape_name, ver_num, mesh_folder='optimization')
+    workflow = Workflow(vape_name, ver_num, mesh_folder='origin')
     workflow.rans_spf_default_flow_rates(vape_type, mesh_user_name)
 
     basic_flow_rates = [17.5, 20.5, 22.5]

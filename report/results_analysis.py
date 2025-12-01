@@ -152,20 +152,47 @@ class ResultsAnalysis():
         avg_loss_sensor = sum(sensor_pressure_losses) / len(sensor_pressure_losses)
         ratio = avg_loss_sensor / avg_loss_total * 100
         txt += f'咪头与出口的平均总压力损失为{avg_loss_sensor:.2f}Pa，占平均吸阻的比例为{ratio:.2f}\\%，'
-        if ratio < 25:
-            txt += (
-                '启动灵敏。\n\n'
-            )
-        elif 25 <= ratio < 50:
-            txt += (
-                '启动灵敏度偏低。\n\n'
-            )
-        elif 50 <= ratio < 75:
-            txt += (
-                '压力损失较大，启动不灵敏。建议优化咪头与烟嘴的连接处设计。\n\n'
-            )
+        if avg_loss_sensor > 100:
+            if ratio < 25:
+                txt += (
+                    '启动灵敏。\n\n'
+                )
+            elif 25 <= ratio < 50:
+                txt += (
+                    '启动灵敏度偏低。\n\n'
+                )
+            elif 50 <= ratio < 75:
+                txt += (
+                    '压力损失较大，启动不灵敏。建议优化咪头与烟嘴的连接处设计。\n\n'
+                )
+            else:
+                txt += (
+                    '压力损失过大，较难启动。强烈建议对咪头与烟嘴连接处进行大幅度调整，减小压力损失。\n\n'
+                )
+        elif avg_loss_sensor > 50 and avg_loss_sensor <= 100:
+            if ratio < 40:
+                txt += (
+                    '启动灵敏。\n\n'
+                )
+            elif 40 <= ratio < 80:
+                txt += (
+                    '启动灵敏度偏低。\n\n'
+                )
+            else:
+                txt += (
+                    '压力损失较大，启动不灵敏。建议优化咪头与烟嘴的连接处设计。\n\n'
+                )
+        elif avg_loss_sensor > 30 and avg_loss_sensor <= 50:
+            if ratio < 60:
+                txt += (
+                    '启动灵敏。\n\n'
+                )
+            else:
+                txt += (
+                    '启动灵敏度偏低。\n\n'
+                )
         else:
             txt += (
-                '压力损失过大，较难启动。强烈建议对咪头与烟嘴连接处进行大幅度调整，减小压力损失。\n\n'
+                '启动灵敏。\n\n'
             )
         return txt

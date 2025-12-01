@@ -44,7 +44,7 @@ def starccm_post(
     except:
         print('post_all.mcr is cleaned')
 
-    def middle_range(scale, ratio_left=0.95, ratio_right=0.95):
+    def middle_range(scale, ratio_left=0.9, ratio_right=0.9):
         """
         在给定范围 scale = [min_x, max_x] 中取中间部分。
         默认去掉两端各 (1 - ratio)/2，比如 ratio=0.95 -> 各去掉5%。

@@ -95,6 +95,7 @@ def slice_plane_xyz(
                         f"{var_name}_{plane_direction}{position}",
                         time_scale)
             else:
+                file_all += View().fit_everything()
                 for n_view, view in enumerate(views):
                     file_all += View().user_def(view[0], view[1], view[2], view[3])
                     if file_name is not None:

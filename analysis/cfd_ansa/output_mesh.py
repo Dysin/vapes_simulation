@@ -8,10 +8,15 @@ from ansa_utils import *
 
 def output_mesh(path, mesh_name):
     ansa_utils = BaseUtils()
-    ansa_utils.open_file(
+    ansa_utils.input_mesh(
         path = path,
-        file_name = mesh_name
+        file_name = mesh_name,
+        file_type = 'nas'
     )
+    # ansa_utils.open_file(
+    #     path = path,
+    #     file_name = mesh_name
+    # )
     mesh_utils = Mesh()
     mesh_utils.output(
         path = path,
@@ -54,6 +59,6 @@ def output_mesh(path, mesh_name):
             )
 
 if __name__ == '__main__':
-    mesh_name = '20251126_bomb1_opt03_airway'
-    path_mesh = r'E:\1_Work\active\airway_analysis\VP218E\mesh\optimization'
+    mesh_name = '20251126_airway'
+    path_mesh = r'E:\1_Work\active\airway_analysis\F01RD03\mesh\origin'
     output_mesh(path_mesh, mesh_name)
