@@ -13,7 +13,7 @@ from utils.params_manager import *
 from utils.files import Files
 from analysis.cfd_starccm.starccm_simulation import *
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
-from analysis.cfd_tecplot.starccm_post import vape_post
+from analysis.post_tecplot.starccm_post import vape_post
 from report.latex import ReportLatex
 
 class Workflow:
@@ -227,19 +227,19 @@ class Workflow:
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_airway_proj)
         basic_flow_rates = [17.5, 20.5, 22.5]
-        # for i in range(0, len(basic_flow_rates)):
-        #     mesh_name, case_name = self.naming_conventions(
-        #         basic_flow_rates[i],
-        #         mesh_user_name
-        #     )
-        #     self.airway_simulation_and_post(
-        #         flow_rate=basic_flow_rates[i],
-        #         user_name=mesh_user_name,
-        #         bool_sim=True,
-        #         bool_post=True,
-        #         bool_res=False,
-        #         report_folder=case_name
-        #     )
+        for i in range(2, len(basic_flow_rates)):
+            mesh_name, case_name = self.naming_conventions(
+                basic_flow_rates[i],
+                mesh_user_name
+            )
+            self.airway_simulation_and_post(
+                flow_rate=basic_flow_rates[i],
+                user_name=mesh_user_name,
+                bool_sim=True,
+                bool_post=True,
+                bool_res=False,
+                report_folder=case_name
+            )
 
         if mesh_user_name is None:
             report_floder = f'{self.ver_num}_rans_spf_flowrate_compare'
@@ -298,14 +298,14 @@ class Workflow:
                 basic_flow_rates[i],
                 mesh_user_name
             )
-            # self.airway_simulation_and_post(
-            #     flow_rate=basic_flow_rates[i],
-            #     user_name=mesh_user_name,
-            #     bool_sim=False,
-            #     bool_post=True,
-            #     bool_res=True,
-            #     report_folder=case_name
-            # )
+            self.airway_simulation_and_post(
+                flow_rate=basic_flow_rates[i],
+                user_name=mesh_user_name,
+                bool_sim=False,
+                bool_post=True,
+                bool_res=True,
+                report_folder=case_name
+            )
 
         if mesh_user_name is None:
             report_floder = f'{self.ver_num}_rans_spf_experiment_compare'

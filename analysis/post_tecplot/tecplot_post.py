@@ -4,7 +4,7 @@
 @Time:   2024/8/6
 '''
 
-from analysis.cfd_tecplot.tecplot_utils import *
+from analysis.post_tecplot.tecplot_utils import *
 
 '''
 全局变量

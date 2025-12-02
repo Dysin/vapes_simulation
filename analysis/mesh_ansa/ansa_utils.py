@@ -290,12 +290,12 @@ class BaseUtils:
 
     def save_file(self, path, file_name):
         '''
-        保存ANSA文件，*.cfd_ansa
+        保存ANSA文件，*.mesh_ansa
         :param path:        文件路径
         :param file_name:   文件名
         :return:
         '''
-        ansa.base.SaveAs(os.path.join(path, file_name + '.cfd_ansa'))
+        ansa.base.SaveAs(os.path.join(path, file_name + '.mesh_ansa'))
     def new_pid(self, pid, name):
         '''
         新建PID

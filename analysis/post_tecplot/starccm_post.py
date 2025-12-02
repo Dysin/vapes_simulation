@@ -7,7 +7,7 @@
 import numpy as np
 import os.path
 from utils import Files
-from analysis.cfd_tecplot.tecplot_post import *
+from analysis.post_tecplot.tecplot_post import *
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
 from geometry.geometry_utils import GeometryUtils
 
