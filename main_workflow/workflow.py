@@ -10,11 +10,12 @@ import numpy as np
 
 from geometry.geometry_utils import GeometryUtils
 from utils.params_manager import *
-from utils.files import Files
+from utils.files import Files,CSVUtils
 from analysis.cfd_starccm.starccm_simulation import *
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
 from analysis.post_tecplot.starccm_post import vape_post
 from report.latex import ReportLatex
+from uq.doe import DOE
 
 class Workflow:
     def __init__(self, product_model, version_number, mesh_folder='origin'):
@@ -77,12 +78,12 @@ class Workflow:
                 ato_direction = axis
                 ato_inlet_coord = (min_v + ato_epsilon) * 1.0e3
                 ato_outlet_coord = (max_v - ato_epsilon) * 1.0e3
-                ato_to_outlet_length = (outlet_coord - max_v) * 1.0e3
+                ato_to_outlet_length = abs(outlet_coord - max_v) * 1.0e3
             else:
                 ato_direction = f'-{axis}'
                 ato_inlet_coord = (max_v - ato_epsilon) * 1.0e3
                 ato_outlet_coord = (min_v + ato_epsilon) * 1.0e3
-                ato_to_outlet_length = (outlet_coord - min_v) * 1.0e3
+                ato_to_outlet_length = abs(outlet_coord - min_v) * 1.0e3
             # 公共部分
             ato_length = abs(max_v - min_v) * 1.0e3
 
@@ -115,29 +116,44 @@ class Workflow:
                 writer.writerows(data)
             sys.exit(f'[ERROR] 文件不存在，已自动创建：{path_config}')
 
-    def naming_conventions(self, flow_rate, user_name):
+    def naming_conventions(
+            self,
+            flow_rate,
+            user_name,
+            batch_num=None,
+            opt_num=None,
+    ):
         '''
         命名规范
         1.网格命名规范：{version_number}{_{user_name}}_airway
-        2.算例文件夹命名规范：{version_number}{_{user_name}}_rans_spf_q{flow_rate}
-                          {version_number}{_{user_name}}_ddes_spf_q{flow_rate}
-                          {version_number}{_{user_name}}_rans_mpf_q{flow_rate}
-                          {version_number}{_{user_name}}_ddes_mpf_q{flow_rate}
+        2.算例文件夹命名规范：
+            {version_number}{_{user_name}}_rans_spf_q{flow_rate}_b{batch_num}_p{opt_num}
+            {version_number}{_{user_name}}_ddes_spf_q{flow_rate}_b{batch_num}_p{opt_num}
+            {version_number}{_{user_name}}_rans_mpf_q{flow_rate}_b{batch_num}_p{opt_num}
+            {version_number}{_{user_name}}_ddes_mpf_q{flow_rate}_b{batch_num}_p{opt_num}
         :param flow_rate: 体积流率
         :return: 网格名&算例名
         '''
-        if user_name is None:
-            mesh_name = f'{self.ver_num}_airway'
-            case_name = f'{self.ver_num}_rans_spf_q{flow_rate}'
+        if batch_num is None:
+            if user_name is None:
+                mesh_name = f'{self.ver_num}_airway'
+                case_name = f'{self.ver_num}_rans_spf_q{flow_rate}'
+            else:
+                mesh_name = f'{self.ver_num}_{user_name}_airway'
+                case_name = f'{self.ver_num}_{user_name}_rans_spf_q{flow_rate}'
         else:
-            mesh_name = f'{self.ver_num}_{user_name}_airway'
-            case_name = f'{self.ver_num}_{user_name}_rans_spf_q{flow_rate}'
+            if user_name is None:
+                mesh_name = f'{self.ver_num}_airway_b{batch_num:02d}_p{opt_num:02d}'
+                case_name = f'{self.ver_num}_rans_spf_q{flow_rate}_b{batch_num:02d}_p{opt_num:02d}'
+            else:
+                mesh_name = f'{self.ver_num}_{user_name}_airway_b{batch_num:02d}_p{opt_num:02d}'
+                case_name = f'{self.ver_num}_{user_name}_rans_spf_q{flow_rate}_b{batch_num:02d}_p{opt_num:02d}'
         return mesh_name, case_name
 
     def airway_simulation_and_post(
             self,
             flow_rate=17.5,
-            user_name=None,
+            mesh_name=None,
             bool_sim=True,
             bool_post=True,
             bool_res=False,
@@ -152,8 +168,7 @@ class Workflow:
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_airway_proj)
 
-        mesh_name, case_name = self.naming_conventions(flow_rate, user_name)
-        path_sim = os.path.join(self.pm.path_simulation, case_name)
+        path_sim = os.path.join(self.pm.path_simulation, report_folder)
         # 检查images路径中是否存在图片
         files_images = Files(self.pm.path_images)
         geo_imgs = files_images.get_file_names_by_type('.png')
@@ -192,7 +207,7 @@ class Workflow:
                 starccm_res.plt_curve('pressure_ave_inlet')
                 starccm_res.plt_curve('pressure_ave_outlet')
                 starccm_res.plt_curve('pressure_ave_airflow_sensor')
-            path_report = os.path.join(self.pm.path_reports, case_name)
+            path_report = os.path.join(self.pm.path_reports, str(report_folder))
             vape_post(
                 path_geo=path_mesh,
                 path_post=path_sim,
@@ -220,21 +235,21 @@ class Workflow:
                 version_number=self.ver_num
             )
             report_latex.convert_images()
-            report_latex.rans_spf_single(case_name)
+            report_latex.rans_spf_single(report_folder)
 
     def rans_spf_default_flow_rates(self, vape_type, mesh_user_name=None):
         self.export_config(mesh_user_name, vape_type)
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_airway_proj)
         basic_flow_rates = [17.5, 20.5, 22.5]
-        for i in range(2, len(basic_flow_rates)):
+        for i in range(0, len(basic_flow_rates)):
             mesh_name, case_name = self.naming_conventions(
                 basic_flow_rates[i],
                 mesh_user_name
             )
             self.airway_simulation_and_post(
                 flow_rate=basic_flow_rates[i],
-                user_name=mesh_user_name,
+                mesh_name=mesh_name,
                 bool_sim=True,
                 bool_post=True,
                 bool_res=False,
@@ -242,10 +257,10 @@ class Workflow:
             )
 
         if mesh_user_name is None:
-            report_floder = f'{self.ver_num}_rans_spf_flowrate_compare'
+            report_folder = f'{self.ver_num}_rans_spf_flowrate_compare'
         else:
-            report_floder = f'{self.ver_num}_{mesh_user_name}_rans_spf_flowrate_compare'
-        path_report = os.path.join(self.pm.path_reports, report_floder)
+            report_folder = f'{self.ver_num}_{mesh_user_name}_rans_spf_flowrate_compare'
+        path_report = os.path.join(self.pm.path_reports, report_folder)
         files_images = Files(self.pm.path_images)
         geo_imgs = files_images.get_file_names_by_type('.png')
         for geo_img in geo_imgs:
@@ -255,7 +270,7 @@ class Workflow:
             )
         report_latex = ReportLatex(
             path_root=self.path_airway_proj,
-            folder_name=report_floder,
+            folder_name=report_folder,
             model_number=self.product_model,
             params_structure=params_str,
             flow_rates=basic_flow_rates,
@@ -268,7 +283,9 @@ class Workflow:
             vape_type,
             flow_rates,
             star_num=0,
-            mesh_user_name=None
+            mesh_user_name=None,
+            bool_sim=True,
+            bool_post=False
     ):
         self.export_config(mesh_user_name, vape_type)
         for i in range(star_num, len(flow_rates)):
@@ -278,9 +295,9 @@ class Workflow:
             )
             self.airway_simulation_and_post(
                 flow_rate=flow_rates[i],
-                user_name=mesh_user_name,
-                bool_sim=True,
-                bool_post=False,
+                mesh_name=mesh_name,
+                bool_sim=bool_sim,
+                bool_post=bool_post,
                 bool_res=False,
                 report_folder=case_name
             )
@@ -296,11 +313,11 @@ class Workflow:
         for i in range(0, len(basic_flow_rates)):
             mesh_name, case_name = self.naming_conventions(
                 basic_flow_rates[i],
-                mesh_user_name
+                mesh_user_name,
             )
             self.airway_simulation_and_post(
                 flow_rate=basic_flow_rates[i],
-                user_name=mesh_user_name,
+                mesh_name=mesh_name,
                 bool_sim=False,
                 bool_post=True,
                 bool_res=True,
@@ -308,10 +325,10 @@ class Workflow:
             )
 
         if mesh_user_name is None:
-            report_floder = f'{self.ver_num}_rans_spf_experiment_compare'
+            report_folder = f'{self.ver_num}_rans_spf_experiment_compare'
         else:
-            report_floder = f'{self.ver_num}_{mesh_user_name}_rans_spf_experiment_compare'
-        path_report = os.path.join(self.pm.path_reports, report_floder)
+            report_folder = f'{self.ver_num}_{mesh_user_name}_rans_spf_experiment_compare'
+        path_report = os.path.join(self.pm.path_reports, report_folder)
         files_images = Files(self.pm.path_images)
         geo_imgs = files_images.get_file_names_by_type('.png')
         for geo_img in geo_imgs:
@@ -321,7 +338,7 @@ class Workflow:
             )
         report_latex = ReportLatex(
             path_root=self.path_airway_proj,
-            folder_name=report_floder,
+            folder_name=report_folder,
             model_number=self.product_model,
             params_structure=params_str,
             flow_rates=basic_flow_rates,
@@ -333,15 +350,135 @@ class Workflow:
             all_flow_rates=flow_rates
         )
 
+    def airway_design_doe(self):
+        input_params_ranges = [
+            [-0.2, -0.1],
+            [-0.6, -0.4],
+            [-0.6, -0.3]
+        ]
+        doe = DOE(input_params_ranges, 10)
+        data = doe.latin_hypercube_sampling()
+        csv_id = 1
+        path_input = os.path.join(
+            self.pm.path_data,
+            f'{ver_num}_input_params_{csv_id:02d}.csv'
+        )
+        # 生成列标题
+        headers = [f'region{i + 1}' for i in range(data.shape[1])]
+        # 写入CSV文件
+        with open(path_input, 'w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            # 写入标题行
+            writer.writerow(headers)
+            # 写入数据行
+            writer.writerows(data)
+        print(f"数据已成功写入 {path_input}")
+
+    def rans_spf_optimization(self, flow_rate):
+        csv_id = 1
+        csv_manager = CSVUtils(
+            self.pm.path_data,
+            f'{ver_num}_input_params_{csv_id:02d}'
+        )
+        df_input = csv_manager.read()
+        # for i in range(0, len(df_input)):
+        #     mesh_name, case_name = self.naming_conventions(
+        #         flow_rate,
+        #         mesh_user_name,
+        #         batch_num=csv_id,
+        #         opt_num=i+1
+        #     )
+        #     self.airway_simulation_and_post(
+        #         flow_rate=flow_rate,
+        #         mesh_name=mesh_name,
+        #         bool_sim=True,
+        #         bool_post=False,
+        #         bool_res=False,
+        #         report_folder=case_name
+        #     )
+        get_params = GetParams()
+        params_str = get_params.structure_config(self.path_airway_proj)
+        basic_flow_rates = [17.5, 20.5, 22.5]
+        if mesh_user_name is None:
+            report_folder = f'{self.ver_num}_rans_spf_optimization_compare'
+        else:
+            report_folder = f'{self.ver_num}_{mesh_user_name}_rans_spf_optimization_scheme'
+        report_latex = ReportLatex(
+            path_root=self.path_airway_proj,
+            folder_name=report_folder,
+            model_number=self.product_model,
+            params_structure=params_str,
+            flow_rates=basic_flow_rates,
+            version_number=self.ver_num
+        )
+        report_latex.rans_spf_comparison_optimization(
+            csv_id,
+            None,
+            None
+        )
+
+    def rans_spf_user_report(
+            self,
+            report_folder,
+            flow_rate,
+            case_names,
+            col_names,
+            captions
+    ):
+        path_report = os.path.join(self.pm.path_reports, str(report_folder))
+        files_images = Files(self.pm.path_images)
+        geo_imgs = files_images.get_file_names_by_type('.png')
+        for geo_img in geo_imgs:
+            files_images.copy(
+                f'{geo_img}.png',
+                os.path.join(path_report, 'images')
+            )
+        get_params = GetParams()
+        params_str = get_params.structure_config(self.path_airway_proj)
+        report_latex = ReportLatex(
+            path_root=self.path_airway_proj,
+            folder_name=report_folder,
+            model_number=self.product_model,
+            params_structure=params_str,
+            flow_rates=flow_rate,
+            version_number=self.ver_num
+        )
+        report_latex.rans_spf_comparison_user(
+            case_names,
+            col_names,
+            captions
+        )
 
 if __name__ == '__main__':
-    vape_name = 'VP218-E'
-    ver_num = '20251126'
-    mesh_user_name = 'bomb1'
-    vape_type = '一次性'
-    workflow = Workflow(vape_name, ver_num)
-    workflow.rans_spf_default_flow_rates(vape_type, mesh_user_name)
+    vape_name = 'VP353'
+    ver_num = '20251201'
+    mesh_user_name = 'modify_r0p4'
 
-    flow_rates = np.arange(17.5, 30, 2.5).tolist()
-    print(flow_rates)
-    # workflow.rans_spf_user_flow_rates(flow_rates)
+    vape_type = '一次性'
+    workflow = Workflow(vape_name, ver_num, mesh_folder='optimization')
+    # workflow.rans_spf_optimization(22.5)
+
+    # flow_rates = np.arange(17.5, 30, 2.5).tolist()
+    # print(flow_rates)
+    # workflow.rans_spf_user_flow_rates(
+    #     vape_type,
+    #     [40.0],
+    #     mesh_user_name=mesh_user_name,
+    #     bool_sim=True,
+    #     bool_post=True
+    # )
+    workflow.rans_spf_user_report(
+        report_folder=f'20251201_modify_rans_spf_optimization_inlets',
+        flow_rate=40.0,
+        case_names=[
+            '20251201_modify_rans_spf_q40.0',
+            '20251201_modify_r0p2_rans_spf_q40.0',
+            '20251201_modify_r0p4_rans_spf_q40.0'
+        ],
+        col_names=[
+            '原气道', '进气口R0.2', '进气口R0.4'
+        ],
+        captions=[
+            'R0.0mm', 'R0.2mm', 'R0.4mm'
+        ]
+    )

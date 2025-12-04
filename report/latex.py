@@ -81,7 +81,7 @@ class ReportLatex(object):
             txt,
             search_string,
             folder_names,
-            captions=None,
+            row_captions,
             main_captions=None
     ):
         """
@@ -114,8 +114,12 @@ class ReportLatex(object):
             suffix_to_remove='.png'
         )
         # === 生成 captions（每行对应一个变量） ===
-        if captions is None:
+        if row_captions is None:
             captions = [[f"{flow} mL/s" for flow in self.flow_rates] for _ in image_names_first]
+        else:
+            captions = [
+                row_captions for _ in image_names_first
+            ]
         if main_captions is None:
             # === 生成 main_captions（主标题） ===
             main_captions = []
@@ -438,9 +442,15 @@ class ReportLatex(object):
         self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
         self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
 
-    def rans_spf_comparison(self, case_names, column_names):
+    def rans_spf_comparison(self, case_names, column_names, captions=None):
         code = ''
         code += '\\section{气道内流场特性分析}\n'
+
+        if isinstance(self.flow_rates, (int, float)):
+            text_fr = f"{self.flow_rates}mL/s"
+        else:
+            text_fr = "、".join([f"{rate}mL/s" for rate in self.flow_rates])
+        code += f'采用RANS方法对气道内流场进行计算，抽吸条件为{text_fr}。\n\n'
 
         # 初始化表头
         table_data_cfd_main = [
@@ -524,12 +534,12 @@ class ReportLatex(object):
             table_data_cfd_params[22].append(f'{results.proudman_acoustic_power_ave:.2f}')
             table_data_cfd_params[23].append(f'{results.proudman_acoustic_power_max:.2f}')
 
-        code += '不同体积流率气道内流场主要物理特性如下表所示：\n\n'
+        code += '气道内流场主要物理特性如下表所示：\n\n'
         code += self.latex.insert_table(
             data=table_data_cfd_main,
             caption='气道内流场主要参数表',
             label='airway_flow',
-            alignment='llll',
+            alignment='lccc',
             position='H'
         )
 
@@ -540,138 +550,68 @@ class ReportLatex(object):
             sensor_pressure_losses
         )
 
-        code += '不同体积流率气道内流场其他特性如下表所示：\n\n'
+        code += '气道内流场其他特性如下表所示：\n\n'
         code += self.latex.insert_table(
             data=table_data_cfd_params,
             caption='气道内流场参数表',
             label='airway_flow',
-            alignment='llll',
+            alignment='lccc',
             position='H'
         )
 
         code += '\\subsection{速度分布}\n'
-        code += self.insert_figures_diff_sim(
-            'x向速度剖面',
-            'velocity_multi_planex_view',
-            case_names,
-            main_captions=['x向速度剖面视图' for _ in range(2)]
-        )
-        code += self.insert_figures_diff_sim(
-            'x向截面速度云图',
-            'velocity_x',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'y向速度剖面',
-            'velocity_multi_planey_view',
-            case_names,
-            main_captions=['y向速度剖面视图' for _ in range(2)]
-        )
-        code += self.insert_figures_diff_sim(
-            'y向截面速度云图',
-            'velocity_y',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'z向速度剖面',
-            'velocity_multi_planez_view',
-            case_names,
-            main_captions=['z向速度剖面视图' for _ in range(2)]
-        )
-        code += self.insert_figures_diff_sim(
-            'z向截面速度云图',
-            'velocity_z',
-            case_names
-        )
+        code += self.insert_figures_diff_sim('x向速度剖面', 'velocity_multi_planex_view', case_names, captions,
+                                             main_captions=['x向速度剖面视图' for _ in range(2)])
+        code += '\\subsubsection{x向速度分布}\n'
+        code += self.insert_figures_diff_sim('x向截面速度云图', 'velocity_x', case_names, captions)
+        code += '\\subsubsection{y向速度分布}\n'
+        code += self.insert_figures_diff_sim('y向速度剖面', 'velocity_multi_planey_view', case_names, captions,
+                                             main_captions=['y向速度剖面视图' for _ in range(2)])
+        code += self.insert_figures_diff_sim('y向截面速度云图', 'velocity_y', case_names, captions)
+        code += '\\subsubsection{z向速度分布}\n'
+        code += self.insert_figures_diff_sim('z向速度剖面', 'velocity_multi_planez_view', case_names, captions,
+                                             main_captions=['z向速度剖面视图' for _ in range(2)])
+        code += self.insert_figures_diff_sim('z向截面速度云图', 'velocity_z', case_names, captions)
 
         code += '\\subsection{总压分布}\n'
-        code += self.insert_figures_diff_sim(
-            'x向截面压力云图',
-            'total_pressure_x',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'y向截面压力云图',
-            'total_pressure_y',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'z向截面压力云图',
-            'total_pressure_z',
-            case_names
-        )
+        code += '\\subsubsection{x向总压分布}\n'
+        code += self.insert_figures_diff_sim('x向截面压力云图', 'total_pressure_x', case_names, captions)
+        code += '\\subsubsection{y向总压分布}\n'
+        code += self.insert_figures_diff_sim('y向截面压力云图', 'total_pressure_y', case_names, captions)
+        code += '\\subsubsection{z向总压分布}\n'
+        code += self.insert_figures_diff_sim('z向截面压力云图', 'total_pressure_z', case_names, captions)
 
         code += '\\subsection{湍动能分布}\n'
-        code += self.insert_figures_diff_sim(
-            'x向截面湍动能云图',
-            'turbulent_kinetic_energy_x',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'y向截面湍动能云图',
-            'turbulent_kinetic_energy_y',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'z向截面湍动能云图',
-            'turbulent_kinetic_energy_z',
-            case_names
-        )
+        code += '\\subsubsection{x向湍动能分布}\n'
+        code += self.insert_figures_diff_sim('x向截面湍动能云图', 'turbulent_kinetic_energy_x', case_names, captions)
+        code += '\\subsubsection{y向湍动能分布}\n'
+        code += self.insert_figures_diff_sim('y向截面湍动能云图', 'turbulent_kinetic_energy_y', case_names, captions)
+        code += '\\subsubsection{z向湍动能分布}\n'
+        code += self.insert_figures_diff_sim('z向截面湍动能云图', 'turbulent_kinetic_energy_z', case_names, captions)
         code += '\\subsection{涡量分布}\n'
-        code += self.insert_figures_diff_sim(
-            'x向截面涡量云图',
-            'vorticityx_x',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'y向截面涡量云图',
-            'vorticityy_y',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'z向截面涡量云图',
-            'vorticityz_z',
-            case_names
-        )
+        code += '\\subsubsection{x向涡量分布}\n'
+        code += self.insert_figures_diff_sim('x向截面涡量云图', 'vorticityx_x', case_names, captions)
+        code += '\\subsubsection{y向涡量分布}\n'
+        code += self.insert_figures_diff_sim('y向截面涡量云图', 'vorticityy_y', case_names, captions)
+        code += '\\subsubsection{z向涡量分布}\n'
+        code += self.insert_figures_diff_sim('z向截面涡量云图', 'vorticityz_z', case_names, captions)
         code += '\\subsection{Q涡分布}\n'
-        code += self.insert_figures_diff_sim(
-            'x向截面Q涡量云图',
-            'qcriterion_x',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'y向截面Q涡量云图',
-            'qcriterion_y',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'z向截面Q涡量云图',
-            'qcriterion_z',
-            case_names
-        )
+        code += '\\subsubsection{x向Q涡分布}\n'
+        code += self.insert_figures_diff_sim('x向截面Q涡量云图', 'qcriterion_x', case_names, captions)
+        code += '\\subsubsection{y向Q涡分布}\n'
+        code += self.insert_figures_diff_sim('y向截面Q涡量云图', 'qcriterion_y', case_names, captions)
+        code += '\\subsubsection{z向Q涡分布}\n'
+        code += self.insert_figures_diff_sim('z向截面Q涡量云图', 'qcriterion_z', case_names, captions)
         code += '\\subsection{Proudman声功率分布}\n'
-        code += self.insert_figures_diff_sim(
-            'x向截面声功率云图',
-            'proudman_acoustic_power_x',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'y向截面声功率云图',
-            'proudman_acoustic_power_y',
-            case_names
-        )
-        code += self.insert_figures_diff_sim(
-            'z向截面声功率云图',
-            'proudman_acoustic_power_z',
-            case_names
-        )
+        code += '\\subsubsection{x向声功率分布}\n'
+        code += self.insert_figures_diff_sim('x向截面声功率云图', 'proudman_acoustic_power_x', case_names, captions)
+        code += '\\subsubsection{y向声功率分布}\n'
+        code += self.insert_figures_diff_sim('y向截面声功率云图', 'proudman_acoustic_power_y', case_names, captions)
+        code += '\\subsubsection{z向声功率分布}\n'
+        code += self.insert_figures_diff_sim('z向截面声功率云图', 'proudman_acoustic_power_z', case_names, captions)
 
         code += '\\subsection{雾化区横截面速度分布}\n'
-        code += self.insert_figures_diff_sim(
-            '雾化区横截面速度分布',
-            'atomization_velocity',
-            case_names
-        )
+        code += self.insert_figures_diff_sim('雾化区横截面速度分布', 'atomization_velocity', case_names, captions)
 
         code += '\\subsection{流线}\n'
         main_captions = [
@@ -679,48 +619,32 @@ class ReportLatex(object):
             'y向基于速度流线图',
             'z向基于速度流线图',
         ]
-        code += self.insert_figures_diff_sim(
-            '基于速度流线图',
-            'streamline_velocity',
-            case_names,
-            main_captions=main_captions
-        )
+        code += self.insert_figures_diff_sim('基于速度流线图', 'streamline_velocity', case_names, row_captions=captions,
+                                             main_captions=main_captions)
         code += '\\subsection{表面压力分布}\n'
         main_captions = [
             'x向表面压力云图',
             'y向表面压力云图',
             'z向表面压力云图',
         ]
-        code += self.insert_figures_diff_sim(
-            '表面压力云图',
-            'contour_pressure',
-            case_names,
-            main_captions=main_captions
-        )
+        code += self.insert_figures_diff_sim('表面压力云图', 'contour_pressure', case_names, row_captions=captions,
+                                             main_captions=main_captions)
         code += '\\subsection{壁面切应力分布}\n'
         main_captions = [
             'x向壁面切应力云图',
             'y向壁面切应力云图',
             'z向壁面切应力云图',
         ]
-        code += self.insert_figures_diff_sim(
-            '壁面切应力云图',
-            'contour_wss',
-            case_names,
-            main_captions=main_captions
-        )
+        code += self.insert_figures_diff_sim('壁面切应力云图', 'contour_wss', case_names, row_captions=captions,
+                                             main_captions=main_captions)
         code += '\\subsection{Curle壁面声功率分布}\n'
         main_captions = [
             'x向Curle壁面声功率云图',
             'y向Curle壁面声功率云图',
             'z向Curle壁面声功率云图',
         ]
-        code += self.insert_figures_diff_sim(
-            'Curle壁面声功率云图',
-            'contour_curle_acoustic_power',
-            case_names,
-            main_captions=main_captions
-        )
+        code += self.insert_figures_diff_sim('Curle壁面声功率云图', 'contour_curle_acoustic_power', case_names,
+                                             row_captions=captions, main_captions=main_captions)
         return code
 
     def rans_spf_comparison_flow_rates(
@@ -759,6 +683,24 @@ class ReportLatex(object):
         self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
         self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
 
+    def rans_spf_comparison_user(
+            self,
+            case_names,
+            col_names,
+            captions
+    ):
+        code = ''
+        code += self.latex.preamble()
+        code += self.latex.first_page()
+        code += self.structural_design_analysis()
+        code += self.rans_spf_comparison(case_names, col_names, captions)
+
+        code += self.latex.end()
+        self.latex.save_to_file(code)
+
+        self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
+        self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
+
     def rans_spf_comparison_optimization(self, csv_id, case_names, column_names):
         '''
         优化方案报告输出
@@ -775,7 +717,7 @@ class ReportLatex(object):
 
         code += '\\section{气道内流场特性分析}\n'
 
-        csv_input_params_name = f'{self.proj_name}_{self.version_number}_input_params_{csv_id}'
+        csv_input_params_name = f'{self.version_number}_input_params_{csv_id:02d}'
         csv_manager = CSVUtils(self.pm.path_data, csv_input_params_name)
         df_input_params = csv_manager.read()
         table_data_input_params = [
@@ -807,7 +749,7 @@ class ReportLatex(object):
             ]
         ]
         for i in range(len(df_input_params)):
-            case_name = f'{self.proj_name}_{self.version_number}_rans_spf_q22.5_b{csv_id}_p{i + 1:02d}'
+            case_name = f'{self.version_number}_rans_spf_q22.5_b{csv_id:02d}_p{i + 1:02d}'
             path_sim = os.path.join(self.pm.path_simulation, case_name)
             params_sim = GetParams().simulation(path_sim)
             table_data_cfd_main.append(
@@ -841,7 +783,7 @@ class ReportLatex(object):
             '$\\overline{T}_{\\text{u}}$为气道平均湍流强度。'
         )
 
-        code += self.rans_spf_comparison(case_names, column_names)
+        # code += self.rans_spf_comparison(case_names, column_names)
 
         code += self.latex.end()
         self.latex.save_to_file(code)

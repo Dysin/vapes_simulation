@@ -463,6 +463,16 @@ class Files:
                 filtered_files.append(processed_name)
         return filtered_files
 
+    def find_dirs_with_keyword(self, keyword):
+        """
+        返回指定路径下所有包含 keyword 的文件夹名（不递归）
+        """
+        print(f'[INFO] 路径：{self.path}')
+        return [
+            name for name in os.listdir(self.path)
+            if os.path.isdir(os.path.join(self.path, name)) and keyword in name
+        ]
+
     def copy(self, name, dst_dir, new_name=None):
         """
         复制文件到指定路径并重命名

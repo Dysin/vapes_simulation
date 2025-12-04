@@ -35,7 +35,7 @@ if __name__ == '__main__':
         [-0.2, 0],
         [-0.2, 0.2]
     ]
-    doe = DOE(input_params_range, 100)
+    doe = DOE(input_params_range, 20)
     res = doe.latin_hypercube_sampling()
     print(res)
     print(res[0][0], res[0][1], res[0][2])

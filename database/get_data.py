@@ -7,9 +7,10 @@
 import os
 import csv
 from utils.params_manager import *
+from utils.files import Files
 
 def get_structure_data(path_project, model_number, flow_rates):
-    csv_params_str = os.path.join(r'D:\1_Work\active\database', '结构参数表.csv')
+    csv_params_str = os.path.join(r'E:\1_Work\active\database', '结构参数表.csv')
 
     # 判断 model_number 是否已存在
     def generate_csv(file, header, row_data):
@@ -97,8 +98,13 @@ def get_structure_data(path_project, model_number, flow_rates):
     ]
 
     for flow_rate in flow_rates:
-        csv_params_sim = os.path.join(r'D:\1_Work\active\database', f'气道流场参数表_Q{flow_rate}.csv')
-        path_results = os.path.join(path_project, 'simulation', f'rans_flow_q{flow_rate}')
+        path_sim = os.path.join(path_project, 'simulation')
+        files_utils = Files(path_sim)
+        case_name = files_utils.find_dirs_with_keyword(f'rans_spf_q{flow_rate}')[0]
+        print(case_name)
+        print(f'[INFO] 算例名：{case_name}')
+        csv_params_sim = os.path.join(r'E:\1_Work\active\database', f'气道流场参数表_Q{flow_rate}.csv')
+        path_results = os.path.join(path_sim, f'{case_name}')
         params_sim = GetParams().simulation(path_results)
         row_data_sim = [
             model_number,
@@ -136,13 +142,28 @@ def get_structure_data(path_project, model_number, flow_rates):
 
 
 if __name__ == '__main__':
-    model_number = 'D581'
-    proj_name = model_number.replace('-', '')
-    print(proj_name)
-    path_root = f'D:\\1_Work\\active\\project\\{proj_name}'
-    get_structure_data(
-        path_root,
-        model_number,
-        [17.5, 20.5, 22.5]
-    )
+    model_numbers = [
+        'ATN021-B',
+        'F01-RD03',
+        'F06-PP01',
+        'RP17',
+        'VP218E',
+        'VP303',
+        'VP317-E',
+        'VP321',
+        'VP322',
+        'VP322-B',
+        'VP325-B',
+        'VP346',
+        'VP353'
+    ]
+    for model_number in model_numbers:
+        proj_name = model_number.replace('-', '')
+        print(proj_name)
+        path_root = f'E:\\1_Work\\active\\airway_analysis\\{proj_name}'
+        get_structure_data(
+            path_root,
+            model_number,
+            [17.5, 20.5, 22.5]
+        )
     #
