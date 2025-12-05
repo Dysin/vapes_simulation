@@ -231,9 +231,12 @@ class MorphUtils:
         else:
             print('[INFO] Morphing active!')
 
-    def create_cylindrical_box(self, curve, radius1, radius2):
+    def create_cylindrical_box(self, curve, radius1, radius2, pshells):
         morph_cyl = ansa.morph.MorphCylindrical(curve, radius1, radius2)
-        res = ansa.morph.MorphLoad(morph_cyl, None, 'Visib')
+        if pshells is not None:
+            res = ansa.morph.MorphLoad(morph_cyl, entities_to_load=pshells)
+        else:
+            res = ansa.morph.MorphLoad(morph_cyl, None, 'Visib')
         print(res)
         print('[INFO] Create cylinder box!')
         return morph_cyl
@@ -252,7 +255,6 @@ class MorphUtils:
         param_id = ansa.morph.MorphParamCreateRadiusOuter("Radius outer", mofaces)
 
         print(param_id)
-        print('00000')
         param = entities_param.get_entity(param_id)
         print(param)
         res = ansa.morph.MorphParam(param, radius)

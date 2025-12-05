@@ -9,7 +9,7 @@ import os.path
 from utils import Files
 from analysis.post_tecplot.tecplot_post import *
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
-from geometry.geometry_utils import GeometryUtils
+from geometry.geometry_utils import STLUtils
 
 def unique_with_precision(value_list, min_prec=5, max_prec=7):
     """
@@ -79,9 +79,9 @@ def starccm_post(
     vorticityz_max = starccm_post.get_value('vorticityz_max_parts')
 
     # 获取几何包围盒尺寸
-    geo_utils = GeometryUtils(path_geo)
-    geo_params = geo_utils.get_stl_bounding_box(geo_name)
-    geo_params_outlet = geo_utils.get_stl_bounding_box(f'{geo_name}_outlet')
+    geo_utils = STLUtils(path_geo)
+    geo_params = geo_utils.get_bounding_box(geo_name)
+    geo_params_outlet = geo_utils.get_bounding_box(f'{geo_name}_outlet')
     print(geo_params_outlet)
 
     var_list = '"X" "Y" "Z" "Curle Surface Acoustic Power dB" "Pressure" "Proudman Acoustic Power dB" "Q-Criterion" "Relative Total Pressure" "Turbulent Kinetic Energy" "Velocity: Magnitude" "Velocity[i]" "Velocity[j]" "Velocity[k]" "Vorticity: Magnitude" "Vorticity[i]" "Vorticity[j]" "Vorticity[k]" "Wall Shear Stress: Magnitude"'

@@ -5,15 +5,15 @@
 '''
 
 import numpy as np
-from main_workflow.workflow import Workflow
+from workflow.workflow_airway import WorkflowRANS
 
 if __name__ == '__main__':
     vape_name = 'VP353'
     ver_num = '20251201'
     mesh_user_name = 'opt02'
     vape_type='一次性'
-    workflow = Workflow(vape_name, ver_num, mesh_folder='optimization')
-    # workflow = Workflow(vape_name, ver_num, mesh_folder='origin')
+    workflow = WorkflowRANS(vape_name, ver_num, mesh_folder='optimization')
+    # workflow = WorkflowRANS(vape_name, ver_num, mesh_folder='origin')
     workflow.rans_spf_default_flow_rates(vape_type, mesh_user_name)
 
     basic_flow_rates = [17.5, 20.5, 22.5]

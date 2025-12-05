@@ -8,6 +8,11 @@ import csv
 import numpy as np
 from ansa_utils import *
 
+def str_to_list(str, scale = 1000):
+    s_clean = str.strip('[]')  # 去除方括号
+    result = [(float(num) * scale) for num in s_clean.split()]  # 分割并转换为float
+    return result
+
 def output_mesh(path, mesh_name):
     mesh_utils = Mesh()
     mesh_utils.output(
@@ -53,27 +58,45 @@ def output_mesh(path, mesh_name):
 def mesh_morph(
         path,
         ansa_name,
-        points,
-        radius_orig,
-        radius_target,
+        delta_radius,
         name_id,
         csv_id
 ):
+    csv_region_params = os.path.join(
+        path_doe,
+        'opt_region_params.csv'
+    )
+    file_data = open(csv_region_params, mode='r')
+    df_regions = list(csv.reader(file_data))
+    file_data.close()
     geo_utils = Geometry()
     base_utils = BaseUtils()
     morph_utils = MorphUtils()
-    mesh_utils = Mesh()
     base_utils.new_project()
     base_utils.input_mesh(path, ansa_name, 'nas')
-    for i in range(len(radius_orig)):
-        curve = geo_utils.create_line(points[i][0], points[i][1])
-        morph_utils.morph_status(True)
+    print(df_regions)
+    pshells = Entities('PSHELL')
+    pshells_all = pshells.entities_all()
+    for i in range(1, len(df_regions)):
+        region_name = 'opt_region' + str(i)
+        for pshell in pshells_all:
+            print(pshell._name)
+            if pshell._name == region_name:
+                pshell_region = pshell
+        scale = 1000
+        center1 = str_to_list(df_regions[i][1])
+        center2 = str_to_list(df_regions[i][2])
+        radius = float(df_regions[i][3]) * scale
+        print(center1, center2, radius)
+        curve = geo_utils.create_line(center1, center2)
         morph = morph_utils.create_cylindrical_box(
             curve,
-            radius1=radius_orig[i],
-            radius2=radius_orig[i]
+            radius1=radius,
+            radius2=radius,
+            pshells=pshell_region,
         )
-        # morph_utils.morph_cylindrical(i+1, radius=radius_target[i])
+        # morph_utils.morph_status(True)
+        # morph_utils.morph_cylindrical(i+1, radius=delta_radius[i])
     mesh_name = ansa_name + '_b' + csv_id + '_p' + "{:02d}".format(name_id)
     # output_mesh(path, mesh_name)
 
@@ -82,7 +105,7 @@ if __name__ == '__main__':
     ver_number = '20251201'
     path_root = r'E:\1_Work\active\airway_analysis'
     path_data = os.path.join(path_root, proj_name, 'data')
-    path_opt = os.path.join(path_root, proj_name, 'mesh', 'doe')
+    path_doe = os.path.join(path_root, proj_name, 'mesh', 'doe')
     csv_id = '01'
     nas_name = ver_number + '_airway'
     csv_input = os.path.join(
@@ -94,17 +117,7 @@ if __name__ == '__main__':
     file_data.close()
 
     print('[INFO] Mesh name: ', nas_name)
-    points = [
-        [[95.58, -8.2, 0.3346], [95.58, -7.28, 0.3346]],
-        [[100.05, -6.14, 0.3349], [98.33, -6.14, 0.3349]],
-        [[86.83, -6.16, 0.3307], [85.91, -6.16, 0.3307]],
-    ]
-    radius = [
-        0.8,
-        1.35,
-        1.2
-    ]
 
     for i in range(10, len(df)):
         delta_r = np.array(df[i]).astype(float)
-        mesh_morph(path_opt, nas_name, points, radius, delta_r, i, csv_id)
+        mesh_morph(path_doe, nas_name, delta_r, i, csv_id)
