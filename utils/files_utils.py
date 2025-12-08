@@ -270,7 +270,7 @@ class Image:
         )
         plt.close()
 
-class Image_3D:
+class Image3D:
     def __init__(self, fontsize):
         fig = plt.figure()
         self.ax = fig.add_subplot(111, projection='3d')
@@ -370,7 +370,7 @@ class Image_3D:
         self.ax.set_zlabel('Z')
         plt.show()
 
-class Files:
+class FileUtils:
     def __init__(self, path):
         self.path = path
 
@@ -516,6 +516,37 @@ class Files:
                     except Exception as e:
                         print(f"删除失败 [{file_path}]: {str(e)}")
         print(f"\n操作完成。共删除 {deleted_count} 个文件。")
+
+    def modify_multiple_lines(self, modifications, backup=False):
+        '''
+        修改多个指定行，path为文件路径+文件名
+        :param modifications: 字典，格式为 {行号: 新内容}
+        :param backup: 是否创建备份
+        :return:
+        '''
+        # 创建备份
+        if backup:
+            import shutil
+            shutil.copy2(self.path, f'{self.path}.bak')
+            print(f"已创建备份: {self.path}.bak")
+        with open(self.path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        # 应用修改
+        for line_num, new_content in modifications.items():
+            idx = line_num - 1
+            if 0 <= idx < len(lines):
+                if new_content is None:
+                    lines[idx] = ''  # 删除行
+                else:
+                    lines[idx] = (new_content + '\n'
+                                  if not new_content.endswith('\n')
+                                  else new_content)
+            else:
+                print(f"警告: 行号 {line_num} 超出文件范围")
+        # 写入文件
+        with open(self.path, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        print(f"已修改文件 {self.path}")
 
 class CSVUtils:
     def __init__(self, path, file_name):

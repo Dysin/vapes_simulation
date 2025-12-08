@@ -5,7 +5,7 @@
 '''
 
 from utils.data_manager import CSV
-from utils.files import Image
+from utils.files_utils import Image
 
 class StarCCMDataAnalysis():
     def __init__(self, path):

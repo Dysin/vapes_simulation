@@ -527,7 +527,7 @@ class File:
     def read_fluent(self, path, file_name):
         file = (
             '$!ReadDataSet  \'"STANDARDSYNTAX" "1.0" "FILELIST_DATAFILES" "2" "%s/%s.cas.h5" "%s/%s.dat.h5"\'\n' % (path, file_name, path, file_name) +
-            '  DataSetReader = \'Fluent Common Fluid Files Loader\'\n'
+            '  DataSetReader = \'Fluent Common Fluid FileUtils Loader\'\n'
             '  ReadDataOption = New\n'
             '  ResetStyle = Yes\n'
             '  AssignStrandIDs = Yes\n'
@@ -559,7 +559,7 @@ class File:
     def add_cas_and_dat(self, path, file_name, var_list):
         file = (
             '$!ReadDataSet  \'"STANDARDSYNTAX" "1.0" "FILELIST_DATAFILES" "2" "%s/%s.cas.h5" "%s/%s.dat.h5"\'\n' % (path, file_name, path, file_name) +
-            '  DataSetReader = \'Fluent Common Fluid Files Loader\'\n'
+            '  DataSetReader = \'Fluent Common Fluid FileUtils Loader\'\n'
             '  VarNameList = \'%s\'\n' % var_list +
             '  ReadDataOption = Append\n'
             '  ResetStyle = No\n'

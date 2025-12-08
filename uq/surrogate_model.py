@@ -9,7 +9,7 @@ from pyKriging.krige import kriging
 from smt.surrogate_models import KRG
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from utils import Image_3D
+from utils import Image3D
 
 class Surrogate_Model:
     def __init__(self, params_input):
@@ -72,7 +72,7 @@ class Surrogate_Model:
         return x_train, y_train, model
 
     def plt_kriging_surface(self, x_train, y_train, model, params_ranges):
-        image3d = Image_3D(12)
+        image3d = Image3D(12)
         train_points = np.column_stack((x_train[:, 0], x_train[:, 1], y_train))
         print(train_points)
         num_params = len(params_ranges)

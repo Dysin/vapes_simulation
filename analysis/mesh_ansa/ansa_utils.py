@@ -83,6 +83,15 @@ class Entities:
         normal = ansa.base.GetFaceOrientation(face)
         return normal
 
+    def get_all_entities_dict(self):
+        '''
+        根据name获取所有Entities的字典
+        :return:
+        '''
+        all_pshell = self.entities_all()
+        pshell_dict = {pshell._name: pshell for pshell in all_pshell}
+        return pshell_dict
+
 class Measurement:
     def __init__(self, entity):
         '''
@@ -165,6 +174,22 @@ class Mesh:
             num_layers=layers_num,
             growth_rate=growth_rate
         )
+
+    def fill_gap_edges(self, input, set_id):
+        '''
+        基于给定网格边线等，填充网格
+        :param input: CONS/CURVE/SET集合
+        :param set_id: set id
+        :return:
+        '''
+        res = ansa.mesh.FillGapCoons(
+            input=input,
+            alternative=True,
+            improve_result_zones=0,
+            result_set_id=set_id,
+            ret_ents=True
+        )
+        return res
 
     def create_mesh_refinement(self, min_coords, max_coords, max_surf_size, max_vol_size):
         '''
@@ -278,6 +303,8 @@ class BaseUtils:
         file_mesh = os.path.join(path, file_name + '.' + file_type)
         if file_type == 'nas':
             ansa.base.InputNastran(file_mesh)
+        elif file_type == 'inp':
+            ansa.base.InputAbaqus(file_mesh)
 
     def open_file(self, path, file_name):
         '''
@@ -308,13 +335,23 @@ class BaseUtils:
         vals_property = {"PID": pid, "Name": name}
         shell_property = ansa.base.CreateEntity(ansa.constants.NASTRAN, "PSHELL", vals_property)
         return shell_property
-    def set_pid(self, entity, pid):
+    def set_pid(self, entity, pid, name=None):
         '''
-        创建PID
+        创建PID，当entity为SHELL是，只能一个个面网格设置，不能用list
         :param entity:      需创建的实体
         :param pid:         pid
         :return:
         '''
-        ansa.base.SetEntityCardValues(ansa.constants.NASTRAN, entity, {"PID": pid})
+        if name is None:
+            ansa.base.SetEntityCardValues(ansa.constants.NASTRAN, entity, {"PID": pid})
+        else:
+            ansa.base.SetEntityCardValues(
+                ansa.constants.NASTRAN,
+                entity,
+                {"PID": pid, "Name": name}
+            )
     def new_project(self):
         ansa.session.New("discard")
+
+    def compress(self):
+        ansa.base.Compress('')

@@ -5,12 +5,12 @@
 '''
 
 from report.latex_utils import *
-from utils.files import Files
+from utils.files_utils import FileUtils
 from utils.images import ImageUtils
 from report.results_analysis import ResultsAnalysis
 from utils.global_variables import *
 from utils.params_manager import *
-from utils.files import Image
+from utils.files_utils import Image
 
 class ReportLatex(object):
     def __init__(
@@ -37,14 +37,14 @@ class ReportLatex(object):
             vape_name=self.vape_name,
             path=self.path_latex
         )
-        self.files_images = Files(self.path_latex_images)
+        self.files_images = FileUtils(self.path_latex_images)
         self.flow_rates = flow_rates
         self.results_analysis = ResultsAnalysis()
         self.version_number = version_number
 
     def convert_images(self):
         path_simulation = os.path.join(self.pm.path_simulation, self.folder_name)
-        files_images = Files(path_simulation)
+        files_images = FileUtils(path_simulation)
         image_manager = ImageUtils()
         image_names = files_images.get_file_names_by_type('.bmp')
         for image_name in image_names:
@@ -95,7 +95,7 @@ class ReportLatex(object):
         image_names_all = []  # 每个流率下的图片名列表（列方向）
         for folder_name in folder_names:
             path_images = os.path.join(self.pm.path_reports, folder_name, 'images')
-            files_images = Files(path_images)
+            files_images = FileUtils(path_images)
             image_names = files_images.filter_star_filenames(
                 search_string=search_string,
                 suffix_to_remove='.png'
@@ -108,7 +108,7 @@ class ReportLatex(object):
         image_names_matrix = list(map(list, zip(*image_names_all)))
         # === 读取第一个流率的图片名，用于生成标题 ===
         path_first = os.path.join(self.pm.path_reports, folder_names[0], 'images')
-        files_first = Files(path_first)
+        files_first = FileUtils(path_first)
         image_names_first = files_first.filter_star_filenames(
             search_string=search_string,
             suffix_to_remove='.png'

@@ -10,10 +10,11 @@ import sys
 from workflow.workflow_base import WorkflowAirwayAnalysisBase
 from geometry.geometry_utils import STLUtils
 from utils.params_manager import *
-from utils.files import Files,CSVUtils
+from utils.files_utils import FileUtils,CSVUtils
 from analysis.cfd_starccm.starccm_simulation import *
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
 from analysis.post_tecplot.starccm_post import vape_post
+from analysis.mesh_ansa.ansa_run import run_ansa
 from report.latex import ReportLatex
 from uq.doe import DOE
 
@@ -117,7 +118,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
 
         path_sim = os.path.join(self.pm.path_simulation, report_folder)
         # 检查images路径中是否存在图片
-        files_images = Files(self.pm.path_images)
+        files_images = FileUtils(self.pm.path_images)
         geo_imgs = files_images.get_file_names_by_type('.png')
         geos_check = ['geometry_inlet', 'geometry_airway']
         for geo_check in geos_check:
@@ -128,7 +129,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             min_size = 8e-5
             max_size = 2 * target_size
             num_layers = 10
-            files_mesh = Files(self.path_mesh)
+            files_mesh = FileUtils(self.path_mesh)
             files_mesh.copy(f'{mesh_name}.nas', path_sim, 'airway.nas')
             starccm = StarCCMSimulation(path_sim)
             starccm.rans_single_phase_flow(
@@ -208,7 +209,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
         else:
             report_folder = f'{self.ver_num}_{self.mesh_user_name}_rans_spf_flowrate_compare'
         path_report = os.path.join(self.pm.path_reports, report_folder)
-        files_images = Files(self.pm.path_images)
+        files_images = FileUtils(self.pm.path_images)
         geo_imgs = files_images.get_file_names_by_type('.png')
         for geo_img in geo_imgs:
             files_images.copy(
@@ -271,7 +272,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
         else:
             report_folder = f'{self.ver_num}_{self.mesh_user_name}_rans_spf_experiment_compare'
         path_report = os.path.join(self.pm.path_reports, report_folder)
-        files_images = Files(self.pm.path_images)
+        files_images = FileUtils(self.pm.path_images)
         geo_imgs = files_images.get_file_names_by_type('.png')
         for geo_img in geo_imgs:
             files_images.copy(
@@ -344,7 +345,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             captions
     ):
         path_report = os.path.join(self.pm.path_reports, str(report_folder))
-        files_images = Files(self.pm.path_images)
+        files_images = FileUtils(self.pm.path_images)
         geo_imgs = files_images.get_file_names_by_type('.png')
         for geo_img in geo_imgs:
             files_images.copy(
@@ -367,8 +368,50 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             captions
         )
 
-    def spf_uq(self, region_num):
-        self.get_airway_opt_region_params(region_num)
+    def spf_uq(
+            self,
+            bool_doe=True,
+            bool_morph=True,
+            input_params_range=None,
+            sample_num=10,
+            csv_id=1
+    ):
+        region_num = len(input_params_range)
+        if bool_doe:
+            doe = DOE(input_params_range, sample_num)
+            data_input = doe.latin_hypercube_sampling()
+            csv_input = os.path.join(
+                self.pm.path_data,
+                f'{ver_num}_input_params_{csv_id:02d}.csv'
+            )
+            header = [f'region{i + 1}' for i in range(region_num)]
+            with open(csv_input, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                # 写入表头
+                writer.writerow(header)
+                # 写入数据
+                writer.writerows(data_input)
+        if bool_morph:
+            self.get_airway_opt_region_params(region_num)
+            path_source_ansa = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa'
+            path_ansa = r'C:\Users\HG\AppData\Local\Apps\BETA_CAE_Systems\ansa_v19.1.1'
+            morph_script = os.path.join(path_source_ansa, 'morph.py')
+            file_utils_morph = FileUtils(morph_script)
+            txt = {
+                127: f'    proj_name = \'{self.proj_name}\'',
+                128: f'    ver_number = \'{self.ver_num}\'',
+                129: f'    csv_id = {csv_id}',
+            }
+            file_utils_morph.modify_multiple_lines(txt, True)
+            output_script = os.path.join(path_source_ansa, 'output_mesh_opt_region.py')
+            file_utils_output = FileUtils(output_script)
+            txt = {
+                33: f'    mesh_name = \'{self.ver_num}_airway\'',
+                34: f'    path_mesh = r\'{self.path_mesh}\'',
+                35: f'    output_opt_region_mesh(path_mesh, mesh_name, {region_num})',
+            }
+            file_utils_output.modify_multiple_lines(txt, True)
+            run_ansa(path_ansa, morph_script, bool_gui=True)
 
 if __name__ == '__main__':
     vape_name = 'VP353'
@@ -403,4 +446,13 @@ if __name__ == '__main__':
     #         'R0.0mm', 'R0.2mm', 'R0.4mm'
     #     ]
     # )
-    workflow.spf_uq(2)
+    input_params_range = [
+        [-0.4, -0.1],
+        [-0.4, -0.2]
+    ]
+    workflow.spf_uq(
+        bool_doe=True,
+        bool_morph=True,
+        input_params_range=input_params_range,
+        sample_num=10
+    )

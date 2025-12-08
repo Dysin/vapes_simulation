@@ -6,7 +6,7 @@
 
 import numpy as np
 import os.path
-from utils import Files
+from utils import FileUtils
 from analysis.post_tecplot.tecplot_post import *
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
 from geometry.geometry_utils import STLUtils
@@ -59,7 +59,7 @@ def starccm_post(
         new_max = max_x - margin_right
         return [new_min, new_max]
 
-    file = Files(path_post)
+    file = FileUtils(path_post)
     file.create_folder(path_post)
 
     starccm_post = StarCCMDataAnalysis(path_post)

@@ -8,7 +8,7 @@ import os
 import numpy as np
 from utils import Image
 from utils import Excel
-from utils import Files
+from utils import FileUtils
 from utils import Common_Interface
 
 class Fluent_Data_Analysis:
@@ -204,7 +204,7 @@ class Fluent_Data_Analysis:
 if __name__ == '__main__':
     path_root = r'F:\05_Special_Projects\202406_aircraft_project\cfd\03_ZQ10\simulation_fluent'
     path_comprehensive_post = os.path.join(path_root, 'comprehensive_post', '20250406')
-    file = Files(path_root)
+    file = FileUtils(path_root)
     file.create_folder('comprehensive_post')
     path_results = []
     labels = []

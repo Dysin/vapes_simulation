@@ -8,7 +8,7 @@ import sys
 import os.path
 import re
 import subprocess
-from utils.files import Files
+from utils.files_utils import FileUtils
 
 class LatexUtils:
     def __init__(
@@ -351,7 +351,7 @@ class LatexUtils:
             '\t% 间隔N行\n'
             '\t\\vspace{10\\baselineskip}\n\n'   
             '\t% 部门信息\n'
-            '\t雾化机理组 \n'
+            '\t研发工程部 \n'
             '\t\\vspace{1\\baselineskip} % 部门与姓名间距\n\n'
             '\t% 姓名\n'
             '\t丘德新\n\n'
@@ -450,7 +450,7 @@ class LatexUtils:
 if __name__ == "__main__":
     results_path = r'D:\1_Work\active\202510_VP322-B\simulation\steady_rans_flow'
     tex_path = r'D:\1_Work\active\202510_VP322-B\file\result_analysis_flow'
-    files = Files(results_path)
+    files = FileUtils(results_path)
     image_names = files.get_file_names_by_type('.bmp')
     print(image_names)
     # 使用该类生成报告

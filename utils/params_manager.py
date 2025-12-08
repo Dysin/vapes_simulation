@@ -7,7 +7,7 @@
 from analysis.cfd_starccm.starccm_data_analysis import StarCCMDataAnalysis
 from dataclasses import dataclass
 from utils.paths_manager import PathManager
-from utils.files import CSVUtils
+from utils.files_utils import CSVUtils
 
 # 计算结果参数
 @dataclass

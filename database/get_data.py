@@ -7,7 +7,7 @@
 import os
 import csv
 from utils.params_manager import *
-from utils.files import Files
+from utils.files_utils import FileUtils
 
 def get_structure_data(path_project, model_number, flow_rates):
     csv_params_str = os.path.join(r'E:\1_Work\active\database', '结构参数表.csv')
@@ -99,7 +99,7 @@ def get_structure_data(path_project, model_number, flow_rates):
 
     for flow_rate in flow_rates:
         path_sim = os.path.join(path_project, 'simulation')
-        files_utils = Files(path_sim)
+        files_utils = FileUtils(path_sim)
         case_name = files_utils.find_dirs_with_keyword(f'rans_spf_q{flow_rate}')[0]
         print(case_name)
         print(f'[INFO] 算例名：{case_name}')
