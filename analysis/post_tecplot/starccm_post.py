@@ -79,9 +79,10 @@ def starccm_post(
     vorticityz_max = starccm_post.get_value('vorticityz_max_parts')
 
     # 获取几何包围盒尺寸
-    geo_utils = STLUtils(path_geo)
-    geo_params = geo_utils.get_bounding_box(geo_name)
-    geo_params_outlet = geo_utils.get_bounding_box(f'{geo_name}_outlet')
+    geo_utils = STLUtils(path_geo, geo_name)
+    geo_params = geo_utils.get_bounding_box()
+    geo_utils = STLUtils(path_geo, f'{geo_name}_outlet')
+    geo_params_outlet = geo_utils.get_bounding_box()
     print(geo_params_outlet)
 
     var_list = '"X" "Y" "Z" "Curle Surface Acoustic Power dB" "Pressure" "Proudman Acoustic Power dB" "Q-Criterion" "Relative Total Pressure" "Turbulent Kinetic Energy" "Velocity: Magnitude" "Velocity[i]" "Velocity[j]" "Velocity[k]" "Vorticity: Magnitude" "Vorticity[i]" "Vorticity[j]" "Vorticity[k]" "Wall Shear Stress: Magnitude"'
@@ -93,9 +94,9 @@ def starccm_post(
     non_wall_contours = [
         ['pressure', 5, pressure_ave - 30, pressure_ave + 30],
         ['proudman_acoustic_power', 6, 0, 60],
-        ['qcriterion', 7, 0, 1e6],
+        ['qcriterion', 7, 0, 1e5],
         ['total_pressure', 8, total_pressure_ave - 30, total_pressure_ave + 30],
-        ['turbulent_kinetic_energy', 9, 0, 5],
+        ['turbulent_kinetic_energy', 9, 0, 1],
         ['velocity', 10, 0, 10],
         ['vorticity', 14, 0, 1e6],
         ['vorticityx', 15, -5000, 5000],

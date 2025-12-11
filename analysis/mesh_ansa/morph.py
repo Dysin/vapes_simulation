@@ -74,10 +74,11 @@ def mesh_morph(
     morph_utils = MorphUtils()
     base_utils.new_project()
     base_utils.input_mesh(path, ansa_name, 'inp')
-    base_utils.new_pid(1, 'inlet')
     pshell_utils = Entities('PSHELL')
     shell_utils = Entities('SHELL')
     set_utils = Entities('SET')
+    pshell_all = pshell_utils.entities_all()
+    base_utils.new_pid(len(pshell_all)+1, 'inlet')
     pshell_dict = pshell_utils.get_all_entities_dict()
     all_sets = set_utils.entities_all()
     scale = 1000
@@ -106,7 +107,7 @@ def mesh_morph(
             faces_inlet = faces
 
     for face in faces_inlet:
-        base_utils.set_pid(face, 1)
+        base_utils.set_pid(face, len(pshell_all)+1)
 
     ansa.base.Not(pshell_dict.get('inlet'))
     ansa.base.Not(pshell_dict.get('outlet'))
@@ -126,14 +127,14 @@ def mesh_morph(
 if __name__ == '__main__':
     proj_name = 'VP353'
     ver_number = '20251201'
-    csv_id = 1
+    batch_id = 4
     path_root = r'E:\1_Work\active\airway_analysis'
     path_data = os.path.join(path_root, proj_name, 'data')
     path_doe = os.path.join(path_root, proj_name, 'mesh', 'doe')
     nas_name = ver_number + '_airway'
     csv_input = os.path.join(
         path_data,
-        ver_number + '_input_params_' + '{:02d}'.format(csv_id) + '.csv'
+        ver_number + '_input_params_' + '{:02d}'.format(batch_id) + '.csv'
     )
     file_data = open(csv_input, mode='r')
     df = list(csv.reader(file_data))
@@ -144,4 +145,4 @@ if __name__ == '__main__':
     for i in range(1, len(df)):
         delta_r = np.array(df[i]).astype(float)
         print(delta_r)
-        mesh_morph(path_doe, nas_name, delta_r, i, csv_id)
+        mesh_morph(path_doe, nas_name, delta_r, i, batch_id)

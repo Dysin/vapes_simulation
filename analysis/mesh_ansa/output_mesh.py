@@ -59,7 +59,6 @@ def output_mesh(path, mesh_name):
             )
 
 if __name__ == '__main__':
-    mesh_name = '20251201_airway'
-    path_mesh = r'E:\1_Work\active\airway_analysis\VP353\mesh\doe'
-    # output_mesh(path_mesh, mesh_name)
-    output_opt_region_mesh(path_mesh, mesh_name, 2)
+    mesh_name = '20251209_airway'
+    path_mesh = r'E:\1_Work\active\airway_analysis\ATR144\mesh\origin'
+    output_mesh(path_mesh, mesh_name)

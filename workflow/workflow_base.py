@@ -56,7 +56,6 @@ class WorkflowAirwayAnalysisBase:
     def normalize_name(
             self,
             flow_rate: float = None,
-            user_name: str = None,
             batch_num: int = None,
             opt_num: int = None,
     ):
@@ -79,8 +78,8 @@ class WorkflowAirwayAnalysisBase:
         '''
         # 基础前缀
         parts = [self.ver_num]
-        if user_name:
-            parts.append(user_name)
+        if self.mesh_user_name is not None:
+            parts.append(self.mesh_user_name)
 
         prefix = "_".join(parts)
 

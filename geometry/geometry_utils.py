@@ -15,7 +15,7 @@ class STLUtils:
         self.path_stl = os.path.join(path, f'{stl_name}.stl')
         self.mesh = trimesh.load(self.path_stl)
 
-    def get_bounding_box(self, stl_name):
+    def get_bounding_box(self):
         """
         读取STL文件并返回包围盒的最小和最大坐标值
         参数:

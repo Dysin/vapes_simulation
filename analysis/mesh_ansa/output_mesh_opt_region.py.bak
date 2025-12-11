@@ -4,12 +4,14 @@
 @Date:   2025/12/8
 '''
 
+from ansa_utils import *
+
 def output_opt_region_mesh(path, mesh_name, region_num):
     ansa_utils = BaseUtils()
     ansa_utils.input_mesh(
         path=path,
         file_name=mesh_name,
-        file_type='nas'
+        file_type='inp'
     )
     mesh_utils = Mesh()
     pshells = Entities('PSHELL')
@@ -32,4 +34,4 @@ def output_opt_region_mesh(path, mesh_name, region_num):
 if __name__ == '__main__':
     mesh_name = '20251201_airway'
     path_mesh = r'E:\1_Work\active\airway_analysis\VP353\mesh\doe'
-    output_opt_region_mesh(path_mesh, mesh_name, 2)
+    output_opt_region_mesh(path_mesh, mesh_name, 4)

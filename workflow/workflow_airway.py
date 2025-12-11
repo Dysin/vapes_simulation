@@ -5,8 +5,10 @@
 '''
 
 import csv
+import os.path
 import sys
 
+import pandas as pd
 from workflow.workflow_base import WorkflowAirwayAnalysisBase
 from geometry.geometry_utils import STLUtils
 from utils.params_manager import *
@@ -17,6 +19,7 @@ from analysis.post_tecplot.starccm_post import vape_post
 from analysis.mesh_ansa.ansa_run import run_ansa
 from report.latex import ReportLatex
 from uq.doe import DOE
+from uq.surrogate_model import Surrogate_Model
 
 class WorkflowRANS(WorkflowAirwayAnalysisBase):
     def __init__(
@@ -37,16 +40,22 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             参数:
                 save_path (str): CSVUtils 文件保存路径（包含文件名，如 "D:/configure.csv"）
         """
-        mesh_name = self.normalize_name()['mesh']
+        name = self.normalize_name()
+        mesh_name = name['mesh']
         path_config = os.path.join(self.pm.path_data, 'configure.csv')
         if not os.path.exists(path_config):
-            geometry_utils = STLUtils(self.path_mesh)
-            area_outlet = geometry_utils.get_area(f'{mesh_name}_outlet') * 1.0e6
-            area_inlet = geometry_utils.get_area(f'{mesh_name}_inlet') * 1.0e6
-            outlet_points = geometry_utils.get_points(f'{mesh_name}_outlet')
-            ato_dir, cos_normal = geometry_utils.detect_plane_orientation(f'{mesh_name}_outlet')
-            box_params = geometry_utils.get_bounding_box(f'{mesh_name}_atomizer_core')
-            ato_diameter, ato_center = geometry_utils.get_cylinder_diameter(f'{mesh_name}_atomizer_core')
+            geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_outlet')
+            area_outlet = geometry_utils.get_area() * 1.0e6
+            geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_inlet')
+            area_inlet = geometry_utils.get_area() * 1.0e6
+            geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_outlet')
+            outlet_points = geometry_utils.get_points()
+            geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_outlet')
+            ato_dir, cos_normal = geometry_utils.detect_plane_orientation()
+            geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_atomizer_core')
+            box_params = geometry_utils.get_bounding_box()
+            geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_atomizer_core')
+            ato_diameter, ato_center = geometry_utils.get_cylinder_diameter()
 
             ato_epsilon = 5.0e-5
             # 取方向轴 index
@@ -185,23 +194,23 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             report_latex.convert_images()
             report_latex.rans_spf_single(report_folder)
 
-    def rans_spf_default_flow_rates(self, vape_type):
+    def spf_default_flow_rates(self, vape_type):
         self.export_config(vape_type)
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_proj)
         basic_flow_rates = [17.5, 20.5, 22.5]
         for i in range(0, len(basic_flow_rates)):
-            mesh_name, case_name = self.normalize_name(
+            names = self.normalize_name(
                 basic_flow_rates[i],
                 self.mesh_user_name
             )
             self.airway_simulation_and_post(
                 flow_rate=basic_flow_rates[i],
-                mesh_name=mesh_name,
+                mesh_name=names['mesh'],
                 bool_sim=True,
                 bool_post=True,
                 bool_res=False,
-                report_folder=case_name
+                report_folder=names['rans_spf']
             )
 
         if self.mesh_user_name is None:
@@ -226,7 +235,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
         )
         report_latex.rans_spf_comparison_flow_rates(user_name=self.mesh_user_name)
 
-    def rans_spf_user_flow_rates(
+    def spf_user_flow_rates(
             self,
             vape_type,
             flow_rates,
@@ -246,7 +255,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
                 report_folder=case_name
             )
 
-    def rans_spf_experiment_compare(
+    def spf_experiment_compare(
             self,
             flow_rates=None
     ):
@@ -293,7 +302,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             all_flow_rates=flow_rates
         )
 
-    def rans_spf_optimization(self, flow_rate):
+    def spf_optimization(self, flow_rate):
         csv_id = 1
         csv_manager = CSVUtils(
             self.pm.path_data,
@@ -317,17 +326,16 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
         #     )
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_proj)
-        basic_flow_rates = [17.5, 20.5, 22.5]
-        if mesh_user_name is None:
-            report_folder = f'{self.ver_num}_rans_spf_optimization_compare'
+        if self.mesh_user_name is None:
+            report_folder = f'{self.ver_num}_rans_spf_optimization_scheme'
         else:
-            report_folder = f'{self.ver_num}_{mesh_user_name}_rans_spf_optimization_scheme'
+            report_folder = f'{self.ver_num}_{self.mesh_user_name}_rans_spf_optimization_scheme'
         report_latex = ReportLatex(
             path_root=self.path_proj,
             folder_name=report_folder,
             model_number=self.product_model,
             params_structure=params_str,
-            flow_rates=basic_flow_rates,
+            flow_rates=flow_rate,
             version_number=self.ver_num
         )
         report_latex.rans_spf_comparison_optimization(
@@ -336,7 +344,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             None
         )
 
-    def rans_spf_user_report(
+    def spf_user_report(
             self,
             report_folder,
             flow_rate,
@@ -368,13 +376,78 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             captions
         )
 
+    def get_csv_params(self, flow_rate):
+        # 合并输入参数
+        file_utils = FileUtils(self.pm.path_data)
+        csv_input_name = f'{self.ver_num}_input_params'
+        file_utils.remove(f'{csv_input_name}.csv')
+        csv_input_names = file_utils.filter_star_filenames(
+            csv_input_name,
+            None
+        )
+        batch_num = len(csv_input_names)
+        dfs = []
+        opt_nums = []
+        for i in range(batch_num):
+            file_csv = os.path.join(
+                self.pm.path_data,
+                str(csv_input_names[i])
+            )
+            opt_nums.append(len(pd.read_csv(file_csv, header=0)))
+            if i == 0:
+                dfs.append(pd.read_csv(file_csv))
+            else:
+                dfs.append(pd.read_csv(file_csv, header=0))
+        print(opt_nums)
+        df_input = pd.concat(dfs, ignore_index=True)
+        file_csv_input = os.path.join(self.pm.path_data, f'{csv_input_name}.csv')
+        df_input.to_csv(file_csv_input, index=False)
+        case_names = []
+        for i in range(batch_num):
+            for j in range(opt_nums[i]):
+                names = self.normalize_name(
+                    flow_rate,
+                    batch_num=i + 1,
+                    opt_num=j + 1
+                )
+                case_names.append(names['rans_spf'])
+
+        csv_utils = CSVUtils(
+            self.pm.path_data,
+            f'{self.ver_num}.output_params'
+        )
+        csv_utils.remove()
+        row_headers_output = [
+            'delta_p_flow',
+            'delta_p_sensor',
+            'curle_acoustic_power_max',
+            'ti_ave_outlet'
+        ]
+        csv_utils.write_row_data(row_headers_output)
+        for i in range(10):
+            path_sim = os.path.join(self.pm.path_simulation, case_names[i])
+            params_sim = GetParams().simulation(path_sim)
+            row = [
+                params_sim.delta_p_flow,
+                params_sim.delta_p_sensor,
+                params_sim.curle_acoustic_power_max,
+                params_sim.ti_ave_outlet
+            ]
+            csv_utils.write_row_data(row)
+        df_output = csv_utils.read()
+        return df_input, df_output
+
     def spf_uq(
             self,
             bool_doe=True,
             bool_morph=True,
+            bool_sim=True,
+            bool_latex=True,
             input_params_range=None,
             sample_num=10,
-            csv_id=1
+            batch_id=1,
+            flow_rate=None,
+            sim_star_num=0
     ):
         region_num = len(input_params_range)
         if bool_doe:
@@ -382,7 +455,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             data_input = doe.latin_hypercube_sampling()
             csv_input = os.path.join(
                 self.pm.path_data,
-                f'{ver_num}_input_params_{csv_id:02d}.csv'
+                f'{ver_num}_input_params_{batch_id:02d}.csv'
             )
             header = [f'region{i + 1}' for i in range(region_num)]
             with open(csv_input, 'w', newline='', encoding='utf-8') as f:
@@ -392,26 +465,73 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
                 # 写入数据
                 writer.writerows(data_input)
         if bool_morph:
-            self.get_airway_opt_region_params(region_num)
             path_source_ansa = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa'
             path_ansa = r'C:\Users\HG\AppData\Local\Apps\BETA_CAE_Systems\ansa_v19.1.1'
-            morph_script = os.path.join(path_source_ansa, 'morph.py')
-            file_utils_morph = FileUtils(morph_script)
-            txt = {
-                127: f'    proj_name = \'{self.proj_name}\'',
-                128: f'    ver_number = \'{self.ver_num}\'',
-                129: f'    csv_id = {csv_id}',
-            }
-            file_utils_morph.modify_multiple_lines(txt, True)
+
             output_script = os.path.join(path_source_ansa, 'output_mesh_opt_region.py')
             file_utils_output = FileUtils(output_script)
             txt = {
-                33: f'    mesh_name = \'{self.ver_num}_airway\'',
-                34: f'    path_mesh = r\'{self.path_mesh}\'',
-                35: f'    output_opt_region_mesh(path_mesh, mesh_name, {region_num})',
+                35: f'    mesh_name = \'{self.ver_num}_airway\'',
+                36: f'    path_mesh = r\'{self.path_mesh}\'',
+                37: f'    output_opt_region_mesh(path_mesh, mesh_name, {region_num})',
             }
             file_utils_output.modify_multiple_lines(txt, True)
-            run_ansa(path_ansa, morph_script, bool_gui=True)
+            run_ansa(path_ansa, output_script, bool_gui=False)
+
+            self.get_airway_opt_region_params(region_num)
+
+            morph_script = os.path.join(path_source_ansa, 'morph.py')
+            file_utils_morph = FileUtils(morph_script)
+            txt = {
+                128: f'    proj_name = \'{self.proj_name}\'',
+                129: f'    ver_number = \'{self.ver_num}\'',
+                130: f'    batch_id = {batch_id}',
+            }
+            file_utils_morph.modify_multiple_lines(txt, True)
+            run_ansa(path_ansa, morph_script, bool_gui=False)
+        case_names = []
+        if bool_sim:
+            for i in range(sim_star_num, sample_num):
+                names = self.normalize_name(
+                    flow_rate,
+                    batch_num=batch_id,
+                    opt_num=i+1
+                )
+                case_names.append(names['rans_spf'])
+                # print(names['mesh'], names['rans_spf'])
+                self.airway_simulation_and_post(
+                    flow_rate=flow_rate,
+                    mesh_name=names['mesh'],
+                    bool_sim=True,
+                    bool_post=False,
+                    bool_res=False,
+                    report_folder=names['rans_spf']
+                )
+
+        df_input, df_output = self.get_csv_params(flow_rate)
+
+
+        if bool_latex:
+            get_params = GetParams()
+            params_str = get_params.structure_config(self.path_proj)
+            if self.mesh_user_name is None:
+                report_folder = f'{self.ver_num}_rans_spf_optimization_scheme'
+            else:
+                report_folder = f'{self.ver_num}_{self.mesh_user_name}_rans_spf_optimization_scheme'
+            report_latex = ReportLatex(
+                path_root=self.path_proj,
+                folder_name=report_folder,
+                model_number=self.product_model,
+                params_structure=params_str,
+                flow_rates=flow_rate,
+                version_number=self.ver_num
+            )
+            report_latex.rans_spf_comparison_optimization(
+                batch_id,
+                case_names,
+                None,
+                None
+            )
 
 if __name__ == '__main__':
     vape_name = 'VP353'
@@ -446,13 +566,25 @@ if __name__ == '__main__':
     #         'R0.0mm', 'R0.2mm', 'R0.4mm'
     #     ]
     # )
+    # input_params_range = [
+    #     [-0.4, -0.1],
+    #     [-0.4, -0.1],
+    #     [-0.2, -0.1],
+    #     [-0.2, -0.1]
+    # ] # 2025.12.09 am
     input_params_range = [
-        [-0.4, -0.1],
-        [-0.4, -0.2]
-    ]
+        [-0.6, -0.1],
+        [-0.1, 0.1],
+        [0.2, 0.5],
+        [-1.0, -0.5]
+    ] # 2025.12.09 pm
     workflow.spf_uq(
-        bool_doe=True,
-        bool_morph=True,
+        bool_doe=False,
+        bool_morph=False,
+        bool_sim=True,
         input_params_range=input_params_range,
-        sample_num=10
+        batch_id=4,
+        sample_num=10,
+        flow_rate=22.5,
+        sim_star_num=5
     )

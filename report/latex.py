@@ -701,7 +701,13 @@ class ReportLatex(object):
         self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
         self.latex.compile_pdf(self.path_latex, PDFLATEXEXE)
 
-    def rans_spf_comparison_optimization(self, csv_id, case_names, column_names):
+    def rans_spf_comparison_optimization(
+            self,
+            csv_id,
+            all_case_names,
+            compare_case_names,
+            compare_column_names
+    ):
         '''
         优化方案报告输出
         :return:
@@ -748,9 +754,8 @@ class ReportLatex(object):
                 '$\\overline{T}_{\\text{u}}(\\mathrm{\\%})$'
             ]
         ]
-        for i in range(len(df_input_params)):
-            case_name = f'{self.version_number}_rans_spf_q22.5_b{csv_id:02d}_p{i + 1:02d}'
-            path_sim = os.path.join(self.pm.path_simulation, case_name)
+        for i in range(len(all_case_names)):
+            path_sim = os.path.join(self.pm.path_simulation, all_case_names[i])
             params_sim = GetParams().simulation(path_sim)
             table_data_cfd_main.append(
                 [i+1] + [
@@ -783,7 +788,7 @@ class ReportLatex(object):
             '$\\overline{T}_{\\text{u}}$为气道平均湍流强度。'
         )
 
-        # code += self.rans_spf_comparison(case_names, column_names)
+        # code += self.rans_spf_comparison(compare_case_names, compare_column_names)
 
         code += self.latex.end()
         self.latex.save_to_file(code)
