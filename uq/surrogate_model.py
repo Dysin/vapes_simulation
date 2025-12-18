@@ -5,21 +5,44 @@ Time:   2024.07.02
 '''
 
 import numpy as np
+import pandas as pd
 from pyKriging.krige import kriging
 from smt.surrogate_models import KRG
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error
 from utils import Image3D
+from uq.error_analysis import BasicError
 
-class Surrogate_Model:
-    def __init__(self, params_input):
+class SurrogateModel:
+    def __init__(self, params_input, params_output):
         '''
         代理模型
         :param params_input:    输入参数
+        :param params_output:   输出参数
         '''
-        self.params_input = params_input
+        self.params_input = self.to_numpy(params_input)
+        self.params_output = self.to_numpy(params_output)
 
-    def kriging_model2(self, params_output):
+    def to_numpy(self, data):
+        """
+        自动识别类型并转为 numpy.ndarray。
+        支持类型：
+        - numpy.ndarray
+        - pandas DataFrame
+        - pandas Series
+        - list / tuple
+        - 标量（int/float）
+        """
+        if isinstance(data, np.ndarray):
+            return data
+        if isinstance(data, (pd.DataFrame, pd.Series)):
+            return data.to_numpy()
+        if isinstance(data, (list, tuple)):
+            return np.array(data)
+        if np.isscalar(data):
+            return np.array([data])
+        raise TypeError(f"不支持的数据类型：{type(data)}")
+
+    def kriging_model2(self):
         '''
         Kriging代理模型
         :param params_output:   输出参数
@@ -27,14 +50,14 @@ class Surrogate_Model:
         '''
         model = kriging(
             self.params_input,
-            params_output,
+            self.params_output,
             testData=None,
             name='basic'
         )
         model.train()
         return model
 
-    def kriging_model(self, params_output):
+    def kriging_model(self):
         '''
         Kriging代理模型
         :param params_output:   输出参数
@@ -43,11 +66,11 @@ class Surrogate_Model:
         model = KRG(
             theta0=[1e-3]
         )
-        model.set_training_values(self.params_input, params_output)
+        model.set_training_values(self.params_input, self.params_output)
         model.train()
         return model
 
-    def kriging_cross_validation(self, params_output, test_size):
+    def kriging_cross_validation(self, test_size):
         '''
         Kriging代理模型交叉验证，给定输入输出参数，自动拆分训练集和测试集
         :param params_output:   输出参数
@@ -56,7 +79,7 @@ class Surrogate_Model:
         '''
         x_train, x_test, y_train, y_test = train_test_split(
             self.params_input,
-            params_output,
+            self.params_output,
             test_size=test_size,
             random_state=23
         )
@@ -64,12 +87,10 @@ class Surrogate_Model:
         model.set_training_values(x_train, y_train)
         model.train()
         y_pred = model.predict_values(x_test)
-        # 计算误差分析 (均方误差 MSE, 平均绝对误差 MAE)
-        mse = mean_squared_error(y_test, y_pred)
-        mae = mean_absolute_error(y_test, y_pred)
-        print(f'均方误差 (MSE): {mse}')
-        print(f'平均绝对误差 (MAE): {mae}')
-        return x_train, y_train, model
+        # 计算误差分析
+        error_analysis = BasicError(y_test, y_pred)
+        error = error_analysis.evaluation_report()
+        return model, error
 
     def plt_kriging_surface(self, x_train, y_train, model, params_ranges):
         image3d = Image3D(12)

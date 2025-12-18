@@ -127,7 +127,7 @@ def mesh_morph(
 if __name__ == '__main__':
     proj_name = 'VP353'
     ver_number = '20251201'
-    batch_id = 3
+    batch_id = 4
     path_root = r'E:\1_Work\active\airway_analysis'
     path_data = os.path.join(path_root, proj_name, 'data')
     path_doe = os.path.join(path_root, proj_name, 'mesh', 'doe')

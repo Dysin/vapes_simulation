@@ -19,7 +19,7 @@ from analysis.post_tecplot.starccm_post import vape_post
 from analysis.mesh_ansa.ansa_run import run_ansa
 from report.latex import ReportLatex
 from uq.doe import DOE
-from uq.surrogate_model import Surrogate_Model
+from uq.surrogate_model import SurrogateModel
 
 class WorkflowRANS(WorkflowAirwayAnalysisBase):
     def __init__(
@@ -30,10 +30,13 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             mesh_user_name=None
     ):
         super().__init__(product_model, version_number, mesh_folder, mesh_user_name)
+        self.path_source_ansa = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa'
+        self.path_ansa = r'C:\Users\HG\AppData\Local\Apps\BETA_CAE_Systems\ansa_v19.1.1'
 
     def export_config(
             self,
-            vape_type
+            vape_type,
+            bool_new = True
     ):
         """
             将电子烟结构参数写入 CSVUtils 文件。
@@ -43,7 +46,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
         name = self.normalize_name()
         mesh_name = name['mesh']
         path_config = os.path.join(self.pm.path_data, 'configure.csv')
-        if not os.path.exists(path_config):
+        if not os.path.exists(path_config) or bool_new:
             geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_outlet')
             area_outlet = geometry_utils.get_area() * 1.0e6
             geometry_utils = STLUtils(self.path_mesh, f'{mesh_name}_inlet')
@@ -107,7 +110,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             with open(path_config, "w", newline='', encoding="utf-8-sig") as f:
                 writer = csv.writer(f)
                 writer.writerows(data)
-            sys.exit(f'[ERROR] 文件不存在，已自动创建：{path_config}')
+            # sys.exit(f'[ERROR] 文件不存在，已自动创建：{path_config}')
 
     def airway_simulation_and_post(
             self,
@@ -195,14 +198,27 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             report_latex.rans_spf_single(report_folder)
 
     def spf_default_flow_rates(self, vape_type):
+        # 输出mesh
+        if self.mesh_user_name is not None:
+            mesh_name = f'{self.ver_num}_{self.mesh_user_name}_airway'
+        else:
+            mesh_name = f'{self.ver_num}_airway'
+        output_script = os.path.join(self.path_source_ansa, 'output_mesh.py')
+        file_utils_output = FileUtils(output_script)
+        txt = {
+            62: f'    mesh_name = \'{mesh_name}\'',
+            63: f'    path_mesh = r\'{self.path_mesh}\'',
+            64: f'    output_mesh(path_mesh, mesh_name)',
+        }
+        file_utils_output.modify_multiple_lines(txt, True)
+        run_ansa(self.path_ansa, output_script, bool_gui=False)
         self.export_config(vape_type)
         get_params = GetParams()
         params_str = get_params.structure_config(self.path_proj)
         basic_flow_rates = [17.5, 20.5, 22.5]
         for i in range(0, len(basic_flow_rates)):
             names = self.normalize_name(
-                basic_flow_rates[i],
-                self.mesh_user_name
+                basic_flow_rates[i]
             )
             self.airway_simulation_and_post(
                 flow_rate=basic_flow_rates[i],
@@ -302,48 +318,6 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             all_flow_rates=flow_rates
         )
 
-    def spf_optimization(self, flow_rate):
-        csv_id = 1
-        csv_manager = CSVUtils(
-            self.pm.path_data,
-            f'{ver_num}_input_params_{csv_id:02d}'
-        )
-        df_input = csv_manager.read()
-        # for i in range(0, len(df_input)):
-        #     mesh_name, case_name = self.naming_conventions(
-        #         flow_rate,
-        #         mesh_user_name,
-        #         batch_num=csv_id,
-        #         opt_num=i+1
-        #     )
-        #     self.airway_simulation_and_post(
-        #         flow_rate=flow_rate,
-        #         mesh_name=mesh_name,
-        #         bool_sim=True,
-        #         bool_post=False,
-        #         bool_res=False,
-        #         report_folder=case_name
-        #     )
-        get_params = GetParams()
-        params_str = get_params.structure_config(self.path_proj)
-        if self.mesh_user_name is None:
-            report_folder = f'{self.ver_num}_rans_spf_optimization_scheme'
-        else:
-            report_folder = f'{self.ver_num}_{self.mesh_user_name}_rans_spf_optimization_scheme'
-        report_latex = ReportLatex(
-            path_root=self.path_proj,
-            folder_name=report_folder,
-            model_number=self.product_model,
-            params_structure=params_str,
-            flow_rates=flow_rate,
-            version_number=self.ver_num
-        )
-        report_latex.rans_spf_comparison_optimization(
-            csv_id,
-            None,
-            None
-        )
-
     def spf_user_report(
             self,
             report_folder,
@@ -398,7 +372,6 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
                 dfs.append(pd.read_csv(file_csv))
             else:
                 dfs.append(pd.read_csv(file_csv, header=0))
-        print(opt_nums)
         df_input = pd.concat(dfs, ignore_index=True)
         file_csv_input = os.path.join(self.pm.path_data, f'{csv_input_name}.csv')
         df_input.to_csv(file_csv_input, index=False)
@@ -411,10 +384,9 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
                     opt_num=j + 1
                 )
                 case_names.append(names['rans_spf'])
-
         csv_utils = CSVUtils(
             self.pm.path_data,
-            f'{self.ver_num}.output_params'
+            f'{self.ver_num}_output_params'
         )
         csv_utils.remove()
         row_headers_output = [
@@ -424,7 +396,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             'ti_ave_outlet'
         ]
         csv_utils.write_row_data(row_headers_output)
-        for i in range(10):
+        for i in range(len(case_names)):
             path_sim = os.path.join(self.pm.path_simulation, case_names[i])
             params_sim = GetParams().simulation(path_sim)
             row = [
@@ -444,72 +416,76 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             bool_sim=True,
             bool_latex=True,
             input_params_range=None,
-            sample_num=10,
             batch_id=1,
+            sample_num=10,
             flow_rate=None,
-            sim_star_num=0
+            sim_star_num=1
     ):
-        region_num = len(input_params_range)
-        if bool_doe:
-            doe = DOE(input_params_range, sample_num)
-            data_input = doe.latin_hypercube_sampling()
-            csv_input = os.path.join(
-                self.pm.path_data,
-                f'{ver_num}_input_params_{batch_id:02d}.csv'
-            )
-            header = [f'region{i + 1}' for i in range(region_num)]
-            with open(csv_input, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.writer(f)
-                # 写入表头
-                writer.writerow(header)
-                # 写入数据
-                writer.writerows(data_input)
-        if bool_morph:
-            path_source_ansa = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa'
-            path_ansa = r'C:\Users\HG\AppData\Local\Apps\BETA_CAE_Systems\ansa_v19.1.1'
-
-            output_script = os.path.join(path_source_ansa, 'output_mesh_opt_region.py')
-            file_utils_output = FileUtils(output_script)
-            txt = {
-                35: f'    mesh_name = \'{self.ver_num}_airway\'',
-                36: f'    path_mesh = r\'{self.path_mesh}\'',
-                37: f'    output_opt_region_mesh(path_mesh, mesh_name, {region_num})',
-            }
-            file_utils_output.modify_multiple_lines(txt, True)
-            run_ansa(path_ansa, output_script, bool_gui=False)
-
-            self.get_airway_opt_region_params(region_num)
-
-            morph_script = os.path.join(path_source_ansa, 'morph.py')
-            file_utils_morph = FileUtils(morph_script)
-            txt = {
-                128: f'    proj_name = \'{self.proj_name}\'',
-                129: f'    ver_number = \'{self.ver_num}\'',
-                130: f'    batch_id = {batch_id}',
-            }
-            file_utils_morph.modify_multiple_lines(txt, True)
-            run_ansa(path_ansa, morph_script, bool_gui=False)
+        r2 = 0
         case_names = []
-        if bool_sim:
-            for i in range(sim_star_num, sample_num):
-                names = self.normalize_name(
-                    flow_rate,
-                    batch_num=batch_id,
-                    opt_num=i+1
+        while r2 < 0.5 and batch_id < 10:
+            region_num = len(input_params_range)
+            if bool_doe:
+                doe = DOE(input_params_range, sample_num)
+                data_input = doe.latin_hypercube_sampling()
+                csv_input = os.path.join(
+                    self.pm.path_data,
+                    f'{self.ver_num}_input_params_{batch_id:02d}.csv'
                 )
-                case_names.append(names['rans_spf'])
-                # print(names['mesh'], names['rans_spf'])
-                self.airway_simulation_and_post(
-                    flow_rate=flow_rate,
-                    mesh_name=names['mesh'],
-                    bool_sim=True,
-                    bool_post=False,
-                    bool_res=False,
-                    report_folder=names['rans_spf']
-                )
+                header = [f'region{i + 1}' for i in range(region_num)]
+                with open(csv_input, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(header)
+                    writer.writerows(data_input)
+            if bool_morph:
+                output_script = os.path.join(self.path_source_ansa, 'output_mesh_opt_region.py')
+                file_utils_output = FileUtils(output_script)
+                txt = {
+                    35: f'    mesh_name = \'{self.ver_num}_airway\'',
+                    36: f'    path_mesh = r\'{self.path_mesh}\'',
+                    37: f'    output_opt_region_mesh(path_mesh, mesh_name, {region_num})',
+                }
+                file_utils_output.modify_multiple_lines(txt, True)
+                run_ansa(self.path_ansa, output_script, bool_gui=False)
 
-        df_input, df_output = self.get_csv_params(flow_rate)
+                self.get_airway_opt_region_params(region_num)
 
+                morph_script = os.path.join(self.path_source_ansa, 'morph.py')
+                file_utils_morph = FileUtils(morph_script)
+                txt = {
+                    128: f'    proj_name = \'{self.proj_name}\'',
+                    129: f'    ver_number = \'{self.ver_num}\'',
+                    130: f'    batch_id = {batch_id}',
+                }
+                file_utils_morph.modify_multiple_lines(txt, True)
+                run_ansa(self.path_ansa, morph_script, bool_gui=False)
+            if bool_sim:
+                for i in range(sim_star_num - 1, sample_num):
+                    names = self.normalize_name(
+                        flow_rate,
+                        batch_num=batch_id,
+                        opt_num=i+1
+                    )
+                    case_names.append(names['rans_spf'])
+                    # print(names['mesh'], names['rans_spf'])
+                    self.airway_simulation_and_post(
+                        flow_rate=flow_rate,
+                        mesh_name=names['mesh'],
+                        bool_sim=True,
+                        bool_post=False,
+                        bool_res=False,
+                        report_folder=names['rans_spf']
+                    )
+
+            # 代理模型
+            df_input, df_output = self.get_csv_params(flow_rate)
+            surrogate_model = SurrogateModel(df_input, df_output)
+            model, error = surrogate_model.kriging_cross_validation(0.2)
+            r2 = error['R2']
+            batch_id += 1
+            print('======================================')
+            print(f'[INFO] batch_id: {batch_id}')
+            print(f'[INFO] R2: {r2}')
 
         if bool_latex:
             get_params = GetParams()
@@ -579,12 +555,12 @@ if __name__ == '__main__':
         [-1.0, -0.5]
     ] # 2025.12.09 pm
     workflow.spf_uq(
-        bool_doe=False,
-        bool_morph=False,
+        bool_doe=True,
+        bool_morph=True,
         bool_sim=True,
         input_params_range=input_params_range,
-        batch_id=4,
+        batch_id=5,
         sample_num=10,
         flow_rate=22.5,
-        sim_star_num=5
+        sim_star_num=1
     )

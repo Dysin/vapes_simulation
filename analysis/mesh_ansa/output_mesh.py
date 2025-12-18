@@ -18,11 +18,11 @@ def output_mesh(path, mesh_name):
     #     file_name = mesh_name
     # )
     mesh_utils = Mesh()
-    mesh_utils.output(
-        path = path,
-        file_name = mesh_name,
-        type = 'nas'
-    )
+    # mesh_utils.output(
+    #     path = path,
+    #     file_name = mesh_name,
+    #     type = 'nas'
+    # )
     mesh_utils.output(
         path=path,
         file_name=mesh_name,
@@ -59,6 +59,6 @@ def output_mesh(path, mesh_name):
             )
 
 if __name__ == '__main__':
-    mesh_name = '20251209_airway'
-    path_mesh = r'E:\1_Work\active\airway_analysis\ATR144\mesh\origin'
+    mesh_name = '20251218_airway'
+    path_mesh = r'E:\1_Work\active\airway_analysis\VP158A\mesh\origin'
     output_mesh(path_mesh, mesh_name)
