@@ -32,6 +32,6 @@ def output_opt_region_mesh(path, mesh_name, region_num):
                 break
 
 if __name__ == '__main__':
-    mesh_name = '20251201_airway'
-    path_mesh = r'E:\1_Work\active\airway_analysis\VP353\mesh\doe'
-    output_opt_region_mesh(path_mesh, mesh_name, 4)
+    mesh_name = '20251219_airway'
+    path_mesh = r'E:\1_Work\active\airway_analysis\VP158A\mesh\doe'
+    output_opt_region_mesh(path_mesh, mesh_name, 3)

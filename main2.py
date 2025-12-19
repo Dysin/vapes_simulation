@@ -10,13 +10,13 @@ from workflow.workflow_airway import WorkflowRANS
 if __name__ == '__main__':
     vape_name = 'VP158-A'
     ver_num = '20251219'
-    mesh_user_name = 'd12'
+    mesh_user_name = 'opt02'
 
     vape_type = '一次性'
     workflow = WorkflowRANS(
         vape_name,
         ver_num,
-        mesh_folder='origin',
+        mesh_folder='optimization',
         mesh_user_name=mesh_user_name
     )
     # workflow.spf_default_flow_rates(vape_type)

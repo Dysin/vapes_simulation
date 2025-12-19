@@ -100,11 +100,11 @@ def mesh_morph(
         morph_utils.morph_status(True)
         morph_utils.morph_cylindrical(i, radius=delta_radius[i-1])
 
-    faces_inlet = None
+    faces_inlet = []
     for i in range(len(all_sets)):
         faces = Mesh().fill_gap_edges(all_sets[i], len(all_sets)+i+1)
-        if all_sets[i]._name == 'edges_inlet':
-            faces_inlet = faces
+        if 'edges_inlet' in all_sets[i]._name:
+            faces_inlet += faces
 
     for face in faces_inlet:
         base_utils.set_pid(face, len(pshell_all)+1)
@@ -125,9 +125,9 @@ def mesh_morph(
     output_mesh(path, mesh_name)
 
 if __name__ == '__main__':
-    proj_name = 'VP353'
-    ver_number = '20251201'
-    batch_id = 5
+    proj_name = 'VP158A'
+    ver_number = '20251219'
+    batch_id = 1
     path_root = r'E:\1_Work\active\airway_analysis'
     path_data = os.path.join(path_root, proj_name, 'data')
     path_doe = os.path.join(path_root, proj_name, 'mesh', 'doe')

@@ -22,7 +22,7 @@ def run_ansa(path_ansa, file_script, bool_gui):
 
 if __name__ == '__main__':
     path_ansa = r'C:\Users\HG\AppData\Local\Apps\BETA_CAE_Systems\ansa_v19.1.1'
-    # file_script = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa\morph.py'
+    file_script = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa\morph.py'
 
-    file_script = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa\output_mesh.py'
-    run_ansa(path_ansa, file_script, bool_gui=False)
+    # file_script = r'E:\1_Work\templates\vapes_simulation\source\analysis\mesh_ansa\output_mesh.py'
+    run_ansa(path_ansa, file_script, bool_gui=True)

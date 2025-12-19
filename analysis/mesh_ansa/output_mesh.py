@@ -59,6 +59,6 @@ def output_mesh(path, mesh_name):
             )
 
 if __name__ == '__main__':
-    mesh_name = '20251219_d12_airway'
-    path_mesh = r'E:\1_Work\active\airway_analysis\VP158A\mesh\origin'
+    mesh_name = '20251219_opt02_airway'
+    path_mesh = r'E:\1_Work\active\airway_analysis\VP158A\mesh\optimization'
     output_mesh(path_mesh, mesh_name)

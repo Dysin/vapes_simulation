@@ -474,7 +474,7 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
                     130: f'    batch_id = {batch_id}',
                 }
                 file_utils_morph.modify_multiple_lines(txt, True)
-                run_ansa(self.path_ansa, morph_script, bool_gui=False)
+                run_ansa(self.path_ansa, morph_script, bool_gui=True)
             if bool_sim:
                 for i in range(sim_star_num - 1, sample_num):
                     names = self.normalize_name(
