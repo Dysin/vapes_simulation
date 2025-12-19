@@ -259,16 +259,32 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             bool_sim=True,
             bool_post=False
     ):
+        # 输出mesh
+        if self.mesh_user_name is not None:
+            mesh_name = f'{self.ver_num}_{self.mesh_user_name}_airway'
+        else:
+            mesh_name = f'{self.ver_num}_airway'
+        output_script = os.path.join(self.path_source_ansa, 'output_mesh.py')
+        file_utils_output = FileUtils(output_script)
+        txt = {
+            62: f'    mesh_name = \'{mesh_name}\'',
+            63: f'    path_mesh = r\'{self.path_mesh}\'',
+            64: f'    output_mesh(path_mesh, mesh_name)',
+        }
+        file_utils_output.modify_multiple_lines(txt, True)
+        run_ansa(self.path_ansa, output_script, bool_gui=False)
         self.export_config(vape_type)
         for i in range(star_num, len(flow_rates)):
-            mesh_name, case_name = self.normalize_name(flow_rates[i], self.mesh_user_name)
+            names = self.normalize_name(
+                flow_rates[i]
+            )
             self.airway_simulation_and_post(
                 flow_rate=flow_rates[i],
-                mesh_name=mesh_name,
+                mesh_name=names['mesh'],
                 bool_sim=bool_sim,
                 bool_post=bool_post,
                 bool_res=False,
-                report_folder=case_name
+                report_folder=names['rans_spf']
             )
 
     def spf_experiment_compare(
@@ -480,12 +496,11 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             # 代理模型
             df_input, df_output = self.get_csv_params(flow_rate)
             surrogate_model = SurrogateModel(df_input, df_output)
-            model, error = surrogate_model.kriging_cross_validation(0.2)
-            r2 = error['R2']
+            models, errors = surrogate_model.gp_cross_validation(0.1)
+            for i in range(len(models)):
+                print(f'[{i+1}/{len(models)}] Model')
+                print(f'{errors[i]}')
             batch_id += 1
-            print('======================================')
-            print(f'[INFO] batch_id: {batch_id}')
-            print(f'[INFO] R2: {r2}')
 
         if bool_latex:
             get_params = GetParams()
@@ -555,12 +570,13 @@ if __name__ == '__main__':
         [-1.0, -0.5]
     ] # 2025.12.09 pm
     workflow.spf_uq(
-        bool_doe=True,
-        bool_morph=True,
-        bool_sim=True,
+        bool_doe=False,
+        bool_morph=False,
+        bool_sim=False,
+        bool_latex=False,
         input_params_range=input_params_range,
         batch_id=5,
         sample_num=10,
         flow_rate=22.5,
-        sim_star_num=1
+        sim_star_num=9
     )

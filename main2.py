@@ -9,12 +9,25 @@ from workflow.workflow_airway import WorkflowRANS
 
 if __name__ == '__main__':
     vape_name = 'VP158-A'
-    ver_num = '20251218'
-    mesh_user_name = None
+    ver_num = '20251219'
+    mesh_user_name = 'd12'
 
     vape_type = '一次性'
-    workflow = WorkflowRANS(vape_name, ver_num, mesh_folder='origin')
-    workflow.spf_default_flow_rates(vape_type)
+    workflow = WorkflowRANS(
+        vape_name,
+        ver_num,
+        mesh_folder='origin',
+        mesh_user_name=mesh_user_name
+    )
+    # workflow.spf_default_flow_rates(vape_type)
+
+    workflow.spf_user_flow_rates(
+        vape_type,
+        [17.5],
+        star_num=0,
+        bool_sim=True,
+        bool_post=False
+    )
 
     input_params_range = [
         [-0.6, -0.1],
