@@ -3,6 +3,7 @@
 Author: Dysin
 Time:   2024.07.02
 '''
+import sys
 
 import torch
 import gpytorch
@@ -11,9 +12,10 @@ import pandas as pd
 from pyKriging.krige import kriging
 from smt.surrogate_models import KRG
 from sklearn.model_selection import train_test_split
-from utils import Image3D
+from utils.images_utils import PltImage3D
 from uq.error_analysis import BasicError
 from uq.model_test import ModelTest
+import itertools
 
 class GPModel(gpytorch.models.ExactGP):
     '''
@@ -98,9 +100,14 @@ class SurrogateModel:
         :param params_input:    输入参数
         :param params_output:   输出参数
         '''
-        self.params_input = self.to_numpy(params_input)
-        self.params_output = self.to_numpy(params_output)
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.x = self.to_numpy(params_input)
+        self.y = self.to_numpy(params_output)
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda')
+            self.x_tensor = self.to_torch(self.x)
+            self.y_tensor = self.to_torch(self.y)
+        else:
+            self.device = torch.device('cpu')
 
     def to_numpy(self, data):
         """
@@ -122,6 +129,34 @@ class SurrogateModel:
             return np.array([data])
         raise TypeError(f"不支持的数据类型：{type(data)}")
 
+    def to_torch(self, data):
+        data_torch = torch.tensor(
+            data,
+            dtype=torch.float32,
+            device=self.device
+        )
+        return data_torch
+
+    def data_split(self, test_size=0.2, data_type='torch'):
+        '''
+        数据拆分，分为训练集和测试集
+        :param test_size: 测试集比例
+        :param data_type: 输出的数据类型：torch(default)/numpy
+        :return:
+        '''
+        x_train, x_test, y_train, y_test = train_test_split(
+            self.x,
+            self.y,
+            test_size=test_size,
+            random_state=23
+        )
+        if data_type == 'torch':
+            x_train = self.to_torch(x_train)
+            x_test = self.to_torch(x_test)
+            y_train = self.to_torch(y_train)
+            y_test = self.to_torch(y_test)
+        return x_train, x_test, y_train, y_test
+
     def kriging(self):
         '''
         Kriging代理模型
@@ -129,8 +164,8 @@ class SurrogateModel:
         :return:
         '''
         model = kriging(
-            self.params_input,
-            self.params_output,
+            self.x,
+            self.y,
             testData=None,
             name='basic'
         )
@@ -144,11 +179,9 @@ class SurrogateModel:
         :param test_size:       测试集比例
         :return:
         '''
-        x_train, x_test, y_train, y_test = train_test_split(
-            self.params_input,
-            self.params_output,
+        x_train, x_test, y_train, y_test = self.data_split(
             test_size=test_size,
-            random_state=23
+            data_type='numpy'
         )
         model = KRG(theta0=[1e-3])
         model.set_training_values(x_train, y_train)
@@ -159,9 +192,9 @@ class SurrogateModel:
         error = error_analysis.evaluation_report()
         return model, error
 
-    def gp_cross_validation(self, test_size=0.2, training_iter=300):
+    def gaussian_process(self, test_size=0.2, training_iter=300):
         """
-        多输出代理模型交叉验证
+        高斯过程，多输出代理模型交叉验证
         每一个输出量 -> 一个单输出 GP（Exact GP, GPU）
 
         Returns
@@ -172,18 +205,9 @@ class SurrogateModel:
             每个输出对应一个误差评估结果
         """
         # ---------- 数据拆分 ----------
-        x_train, x_test, y_train, y_test = train_test_split(
-            self.params_input,
-            self.params_output,
-            test_size=test_size,
-            random_state=23
+        x_train, x_test, y_train, y_test = self.data_split(
+            test_size=test_size
         )
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        # ---------- numpy -> torch ----------
-        x_train = torch.tensor(x_train, dtype=torch.float32, device=device)
-        x_test = torch.tensor(x_test, dtype=torch.float32, device=device)
-        y_train = torch.tensor(y_train, dtype=torch.float32, device=device)
-        y_test = torch.tensor(y_test, dtype=torch.float32, device=device)
         # ---------- 关键：统一输出维度 ----------
         # 若为单输出：(N,) -> (N, 1)
         if y_train.ndim == 1:
@@ -191,6 +215,7 @@ class SurrogateModel:
             y_test = y_test.unsqueeze(1)
         n_outputs = y_train.shape[1]
         models = []
+        likelihoods = []
         errors = []
         # ---------- 每个输出单独训练一个 GP ----------
         for i in range(n_outputs):
@@ -198,12 +223,13 @@ class SurrogateModel:
             y_train_i = y_train[:, i]
             y_test_i = y_test[:, i]
             # ---------- GP 定义 ----------
-            likelihood = gpytorch.likelihoods.GaussianLikelihood().to(device)
+            likelihood = gpytorch.likelihoods.GaussianLikelihood(
+            ).to(self.device)
             model = GPModel(
                 train_x=x_train,
                 train_y=y_train_i,
                 likelihood=likelihood
-            ).to(device)
+            ).to(self.device)
             # ---------- 训练 ----------
             model.train()
             likelihood.train()
@@ -226,49 +252,92 @@ class SurrogateModel:
             error_analysis = BasicError(y_test_i, y_pred_i)
             error = error_analysis.evaluation_report()
             models.append(model)
+            likelihoods.append(likelihood)
             errors.append(error)
-        return models, errors
+        return models, likelihoods, errors
 
-    def plt_kriging_surface(self, x_train, y_train, model, params_ranges):
-        image3d = Image3D(12)
-        train_points = np.column_stack((x_train[:, 0], x_train[:, 1], y_train))
-        print(train_points)
-        num_params = len(params_ranges)
-        names = []
-        ranges = []
-        for key, value in params_ranges.items():
-            names.append(key)
-            ranges.append(value)
-        x_list = []
-        for i in range(num_params):
-            x = np.linspace(ranges[i][0], ranges[i][1], 100)
-            x_list.append(x)
-        # 选择要绘制的 x 和 y 参数
-        x_axis_index = 0  # 选择第 1 个输入参数（可以更改为 1-9）
-        y_axis_index = 1  # 选择第 2 个输入参数（可以更改为 1-9）
-        grid_x, grid_y = np.meshgrid(x_list[x_axis_index], x_list[y_axis_index])
-        # 根据选择的 x 和 y 创建预测点
-        # 将其他参数固定为其范围的中间值
-        fixed_params = [(r[0] + r[1]) / 2 for r in ranges]  # 所有固定参数设置为范围中间值
-        # 创建输入点网格
-        grid_points = np.zeros((grid_x.size, num_params))
-        grid_points[:, x_axis_index] = grid_x.ravel()  # 设置选定的 x 参数
-        grid_points[:, y_axis_index] = grid_y.ravel()  # 设置选定的 y 参数
-        # 为其他参数赋固定值
-        for i in range(num_params):
-            if i != x_axis_index and i != y_axis_index:
-                grid_points[:, i] = fixed_params[i]
-        grid_z = model.predict_values(grid_points)
-        grid_z = grid_z.reshape(grid_x.shape)  # 将预测结果 reshape 为网格形状
-        text = f'X: {names[0]}\nY: {names[1]}'
-        image3d.scatters_and_surface(
-            train_points,
-            grid_x,
-            grid_y,
-            grid_z,
-            text_position=[1, 1, 1],
-            text=text
-        )
+    def plot_gp_surface(
+            self,
+            model,
+            likelihood,
+            path=None,
+            output_idx=0,
+            n_grid=50
+    ):
+        '''
+        绘制 GPyTorch 模型的二维输入 - 单输出响应曲面，并可绘制训练点
+        :param model:       已训练好的 GP 模型
+        :param likelihood:  对应的似然
+        :param path:        如果指定路径，则保存图像
+        :param output_idx:  要绘制的输出索引
+        :param n_grid:      网格密度
+        :return:
+        '''
+        # 获取两两组合，不重复
+        combinations = list(itertools.combinations(range(self.x.shape[1]), 2))
+        print(combinations)
+        for i_comb in range(len(combinations)):
+            x_idx, y_idx = combinations[i_comb]
+            # 构建网格
+            x_lin = np.linspace(
+                self.x_tensor[:, x_idx].min().item(),
+                self.x_tensor[:, x_idx].max().item(),
+                n_grid
+            )
+            y_lin = np.linspace(
+                self.x_tensor[:, y_idx].min().item(),
+                self.x_tensor[:, y_idx].max().item(),
+                n_grid
+            )
+            X1, X2 = np.meshgrid(x_lin, y_lin)
+
+            # 生成网格输入
+            X_grid = np.zeros(
+                (n_grid * n_grid, self.x_tensor.shape[1]),
+                dtype=np.float32
+            )
+            X_grid[:, x_idx] = X1.ravel()
+            X_grid[:, y_idx] = X2.ravel()
+            for i in range(self.x_tensor.shape[1]):
+                if i != x_idx and i != y_idx:
+                    X_grid[:, i] = self.x_tensor[:, i].mean().item()
+            X_grid = self.to_torch(X_grid)
+
+            # 确保模型在同一设备
+            model = model.to(self.device)
+            likelihood = likelihood.to(self.device)
+
+            # 模型预测
+            model.eval()
+            likelihood.eval()
+            with torch.no_grad(), torch.inference_mode():
+                pred = likelihood(model(X_grid))
+                y_mean = pred.mean
+                # 自动判断单输出/多输出
+                if y_mean.ndim == 1:
+                    Y_pred = y_mean.reshape(n_grid, n_grid).cpu().numpy()
+                else:
+                    Y_pred = y_mean[:, output_idx].reshape(n_grid, n_grid).cpu().numpy()
+
+            # 绘制曲面
+            plt3d = PltImage3D(
+                path = path,
+                image_name = f'surrogate_model_gp{output_idx+1:02d}_{i_comb+1:02d}'
+            )
+            axis_labels = [
+                f'X{x_idx+1}',
+                f'X{y_idx+1}',
+                f'Y{output_idx+1}'
+            ]
+            plt3d.scatters_and_surface(
+                self.x[:, x_idx],
+                self.x[:, y_idx],
+                self.y[:, output_idx],
+                X1,
+                X2,
+                Y_pred,
+                axis_labels=axis_labels,
+            )
 
 
 if __name__ == '__main__':
@@ -276,6 +345,6 @@ if __name__ == '__main__':
     x, y = test.get_data(100, 2, -5, 5)
     model = SurrogateModel(x, y)
     # kriging_model, error = model.kriging_cross_validation(0.2)
-    gp_model, error = model.gp_cross_validation(0.2)
+    gp_model, error = model.gaussian_process(0.2)
     print(f'[INFO] Number of model: {len(gp_model)}')
     print(error)

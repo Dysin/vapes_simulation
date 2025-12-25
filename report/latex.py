@@ -6,7 +6,7 @@
 
 from report.latex_utils import *
 from utils.files_utils import FileUtils
-from utils.images import ImageUtils
+from utils.images_utils import ImageUtils
 from report.results_analysis import ResultsAnalysis
 from utils.global_variables import *
 from utils.params_manager import *

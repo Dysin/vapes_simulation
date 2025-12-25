@@ -8,9 +8,9 @@ import numpy as np
 from workflow.workflow_airway import WorkflowRANS
 
 if __name__ == '__main__':
-    vape_name = 'VP218-E'
-    ver_num = '20251217'
-    mesh_user_name = 'bomb1_level1'
+    vape_name = 'VP158-A'
+    ver_num = '20251224'
+    mesh_user_name = None
     vape_type='一次性'
     workflow = WorkflowRANS(
         vape_name,

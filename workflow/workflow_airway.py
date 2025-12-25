@@ -20,6 +20,7 @@ from analysis.mesh_ansa.ansa_run import run_ansa
 from report.latex import ReportLatex
 from uq.doe import DOE
 from uq.surrogate_model import SurrogateModel
+from utils.images_utils import PltImage3D
 
 class WorkflowRANS(WorkflowAirwayAnalysisBase):
     def __init__(
@@ -496,11 +497,18 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             # 代理模型
             df_input, df_output = self.get_csv_params(flow_rate)
             surrogate_model = SurrogateModel(df_input, df_output)
-            models, errors = surrogate_model.gp_cross_validation(0.1)
+            models, likelihoods, errors = surrogate_model.gaussian_process(0.1)
             for i in range(len(models)):
                 print(f'[{i+1}/{len(models)}] Model')
                 print(f'{errors[i]}')
+                surrogate_model.plot_gp_surface(
+                    models[i],
+                    likelihoods[i],
+                    path=self.pm.path_images,
+                    output_idx=i
+                )
             batch_id += 1
+            sys.exit()
 
         if bool_latex:
             get_params = GetParams()
