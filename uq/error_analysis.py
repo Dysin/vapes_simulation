@@ -20,7 +20,7 @@ from numpy.linalg import cond
 import warnings
 warnings.filterwarnings("ignore")
 
-class ErrorBasic():
+class ErrorBasic:
     '''
     基础误差指标：
     MAE / RMSE / MAPE / MaxError / R²

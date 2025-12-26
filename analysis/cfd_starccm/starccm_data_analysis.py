@@ -5,7 +5,7 @@
 '''
 
 from utils.data_manager import CSV
-from utils.files_utils import Image
+from utils.images_utils import PlotImage2D
 
 class StarCCMDataAnalysis():
     def __init__(self, path):
@@ -17,15 +17,16 @@ class StarCCMDataAnalysis():
     ):
         csv = CSV(self.path, file_name)
         df = csv.read()
-        image_manager = Image(
+        plt_image = PlotImage2D(
             self.path,
             file_name,
-            x=df.iloc[:,0],
-            y=df.iloc[:,1],
             label_x='Iterations',
             label_y='Pressure'
         )
-        image_manager.plt_curve()
+        plt_image.plt_curve(
+            x=df.iloc[:, 0],
+            y=df.iloc[:, 1]
+        )
 
     def get_pressure_difference_by_p(self, file_name1, file_name2):
         csv1 = CSV(self.path, file_name1)

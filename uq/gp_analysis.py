@@ -9,8 +9,6 @@ import gpytorch
 import numpy as np
 import itertools
 from sklearn.model_selection import KFold
-from SALib.sample import saltelli
-from SALib.analyze import sobol
 from uq.surrogate_model import SurrogateModelBasic
 from uq.error_analysis import ErrorBasic
 from uq.sensitivity_analysis import SensitivityAnalyzer

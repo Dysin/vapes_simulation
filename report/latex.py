@@ -10,7 +10,7 @@ from utils.images_utils import ImageUtils
 from report.results_analysis import ResultsAnalysis
 from utils.global_variables import *
 from utils.params_manager import *
-from utils.files_utils import Image
+from utils.images_utils import PlotImage2D
 
 class ReportLatex(object):
     def __init__(
@@ -210,22 +210,22 @@ class ReportLatex(object):
             results = GetParams().simulation(path_results)
             sim_y.append(results.delta_p_flow)
         sim_y_list.append(sim_y)
-        image_manager = Image(
-            self.path_latex_images,
-            'draw_resistance_exp_vs_sim',
-            x=sim_x_list,
-            y=sim_y_list,
+        plt_image = PlotImage2D(
+            path_save=self.path_latex_images,
+            file_name='draw_resistance_exp_vs_sim',
             label_x='Flow Rate(mL/s)',
             label_y='Draw Resistance(Pa)',
             figure_size=(14, 9)
         )
-        image_manager.plt_curve_with_points(
-            colors=['red'],
+        plt_image.plt_curve_with_points(
             scatter_x=[df_exp.iloc[:, 0]],
             scatter_y=[df_exp.iloc[:, 1]],
-            y_range=[min(sim_y_list[0])-100, max(sim_y_list[0])+200],
+            curve_x=sim_x_list,
+            curve_y=sim_y_list,
             legend_text=['Simulation', 'Experiment'],
-            linewidth=4
+            range_y=[min(sim_y_list[0]) - 100, max(sim_y_list[0]) + 200],
+            line_width=4,
+            colors=['red']
         )
         image_name_vs = 'draw_resistance_exp_vs_sim'
         code += self.latex.insert_figure(

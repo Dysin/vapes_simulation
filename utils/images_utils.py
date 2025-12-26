@@ -232,14 +232,16 @@ class PlotImage2D:
             range_x=None,
             range_y=None,
             invert_yaxis=False,
-            markersize=8,
-            linewidth=3,
+            marker_size=8,
+            line_width=3,
+            colors=None
     ):
         """
         绘制曲线 + 点
         markers: 点样式列表，比如 ['o','s','^','d']，若 None 则自动循环
         """
-        colors = self.colors(len(curve_y))
+        if colors is None:
+            colors = self.colors(len(curve_y))
         # 默认点样式循环
         default_markers = ['o', 's', '^', 'd', 'v', 'p', '*', 'x']
         default_colors = ['k', 'g', 'r', 'c', 'm', 'y', 'b']
@@ -256,7 +258,7 @@ class PlotImage2D:
                 curve_x[i],
                 curve_y[i],
                 color=colors[i],
-                linewidth=linewidth
+                linewidth=line_width
             )
         for i in range(len(scatter_y)):
             # 绘制点
@@ -265,7 +267,7 @@ class PlotImage2D:
                 scatter_y[i],
                 color=default_colors[i],
                 marker=markers[i],
-                s=markersize ** 2,   # s 为面积
+                s=marker_size ** 2,   # s 为面积
             )
 
         if legend_text is not None:
