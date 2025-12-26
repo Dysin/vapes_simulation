@@ -252,7 +252,7 @@ class STLUtils:
     def oriented_bbox_along_axis(self, axis):
         """
         基于给定轴向的orientented bounding box (OBB)
-        返回: center, extents(size), rotation_matrix, corner_points
+        返回: center, extents(font_size), rotation_matrix, corner_points
         """
         # normalize axis
         axis = axis / np.linalg.norm(axis)

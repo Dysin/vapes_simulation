@@ -35,7 +35,8 @@ class ReportLatex(object):
         os.makedirs(self.path_latex_images, exist_ok=True)
         self.latex = LatexUtils(
             vape_name=self.vape_name,
-            path=self.path_latex
+            path=self.path_latex,
+            version_number=version_number,
         )
         self.files_images = FileUtils(self.path_latex_images)
         self.flow_rates = flow_rates

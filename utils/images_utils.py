@@ -6,6 +6,7 @@
 
 import os
 import numpy as np
+import pandas as pd
 from PIL import Image, ImageOps
 import matplotlib
 matplotlib.use("TkAgg")   # 或 "Qt5Agg"
@@ -48,7 +49,439 @@ class ImageUtils():
             )
         print(f'[INFO] 已将图片 {image_bmp} 转换为 {image_png}')
 
-class PltImage3D:
+class PlotImage2D:
+    # path_save:        保存图片路径
+    # file_name:        图片名
+    # colormap_name:    色系名称（viridis, plasma, inferno, magma, cividis）
+    def __init__(
+            self,
+            path_save,
+            file_name,
+            label_x='x',
+            label_y='y',
+            colormap_name='1',
+            font_size=22,
+            figure_size=(12, 9)
+    ):
+        self.path_save = path_save
+        self.file_name = file_name
+        self.colormap_name = colormap_name
+        self.label_x = label_x
+        self.label_y = label_y
+        self.path_image = os.path.join(path_save, f'{file_name}.png')
+        # 设置全局字体大小
+        self.font_size = font_size
+        self.figure_size = figure_size
+        # 设置xtick和ytick的方向：in、out、inout
+        plt.rcParams['xtick.direction'] = 'in'
+        plt.rcParams['ytick.direction'] = 'in'
+        # X、Y轴标签字体大小
+        plt.rcParams['xtick.labelsize'] = self.font_size
+        plt.rcParams['ytick.labelsize'] = self.font_size
+        # X、Y轴刻度标签字体大小
+        plt.rcParams['axes.labelsize'] = self.font_size
+        # 设置默认字体为中文字体
+        plt.rcParams['font.sans-serif'] = ['SimHei']
+        # 解决负号显示问题
+        plt.rcParams['axes.unicode_minus'] = False
+        # 设置图片长宽比例
+        plt.figure(figsize=figure_size)
+
+    def to_numpy(self, data):
+        """
+        自动识别类型并转为 numpy.ndarray。
+        支持类型：
+        - numpy.ndarray
+        - pandas DataFrame
+        - pandas Series
+        - list / tuple
+        - 标量（int/float）
+        """
+        if isinstance(data, np.ndarray):
+            return data
+        if isinstance(data, (pd.DataFrame, pd.Series)):
+            return data.to_numpy()
+        if isinstance(data, (list, tuple)):
+            return np.array(data)
+        if np.isscalar(data):
+            return np.array([data])
+        raise TypeError(f"不支持的数据类型：{type(data)}")
+
+    def get_colormap(self):
+        '''
+        色系
+        :return:
+        '''
+        colormaps = {
+            '1': plt.cm.viridis,
+            '2': plt.cm.plasma,
+            '3': plt.cm.inferno,
+            '4': plt.cm.magma,
+            '5': plt.cm.cividis,
+            # 添加更多的色系
+        }
+        return colormaps.get(self.colormap_name)  # 默认返回viridis色系
+    def colors(self, num_colors):
+        results = self.get_colormap()(np.linspace(0, 1, num_colors))
+        return results
+    def plt_curve(
+            self,
+            x,
+            y,
+            labels=None,
+            range_x=None,
+            range_y=None
+    ):
+        x = self.to_numpy(x)
+        y = self.to_numpy(y)
+        plt.plot(
+            x,
+            y,
+            'k-',
+            markersize = 2.5,
+            linewidth = 2,
+            label = labels
+        )
+        plt.legend(loc='best',frameon=False)    # 去掉图例边框，设置字体
+        if range_x is None:
+            plt.xlim(xmin=min(x), xmax=max(x))
+        else:
+            plt.xlim(xmin=range_x[0], xmax=range_x[1])
+        if range_y is not None:
+            plt.ylim(ymin=range_y[0], ymax=range_y[1])
+        plt.grid(linestyle='--')  # 添加网格线
+        plt.xlabel(self.label_x)
+        plt.ylabel(self.label_y)
+        plt.savefig(
+            # 文件路径+文件名
+            self.path_image,
+            # @dpi 每英寸像素数，可以理解为清晰度或细腻度
+            dpi = 1000
+        )
+        plt.close()
+    def plt_multicurve(
+            self,
+            x,
+            y,
+            labels=None,
+            legend_text=None,
+            legend_size=None,
+            range_x=None,
+            range_y=None,
+            invert_yaxis=False,
+    ):
+        x = self.to_numpy(x)
+        y = self.to_numpy(y)
+        colors = self.colors(len(y))
+        if labels is None:
+            for i in range(len(y)):
+                plt.plot(
+                    x[i],
+                    y[i],
+                    # self.styles[i],
+                    color=colors[i],
+                    markersize = 6.5,
+                    linewidth = 2,
+                )
+        else:
+            for i in range(len(y)):
+                plt.plot(
+                    x[i],
+                    y[i],
+                    # self.styles[i],
+                    color=colors[i],
+                    markersize = 6.5,
+                    linewidth = 2,
+                    label = labels[i]
+                )
+        if legend_text is not None:
+            plt.legend(
+                labels=legend_text,
+                loc='best',
+                frameon=False,
+                fontsize=legend_size
+            )    # 去掉图例边框，设置字体
+        plt.xlabel(self.label_x)
+        plt.ylabel(self.label_y)
+        if range_x is None:
+            plt.xlim(xmin=min(x[0]), xmax=max(x[0]))
+        else:
+            plt.xlim(xmin=range_x[0], xmax=range_x[1])
+        if range_y is not None:
+            plt.ylim(ymin=range_y[0], ymax=range_y[1])
+        plt.grid(linestyle = '--')  # 添加网格线
+        if invert_yaxis:
+            plt.gca().invert_yaxis()
+        plt.savefig(
+            # 文件路径+文件名
+            self.path_image,
+            # @dpi 每英寸像素数，可以理解为清晰度或细腻度
+            dpi = 600
+        )
+        plt.close()
+
+    def plt_curve_with_points(
+            self,
+            scatter_x,
+            scatter_y,
+            curve_x,
+            curve_y,
+            markers=None,
+            legend_text=None,
+            legend_size=None,
+            range_x=None,
+            range_y=None,
+            invert_yaxis=False,
+            markersize=8,
+            linewidth=3,
+    ):
+        """
+        绘制曲线 + 点
+        markers: 点样式列表，比如 ['o','s','^','d']，若 None 则自动循环
+        """
+        colors = self.colors(len(curve_y))
+        # 默认点样式循环
+        default_markers = ['o', 's', '^', 'd', 'v', 'p', '*', 'x']
+        default_colors = ['k', 'g', 'r', 'c', 'm', 'y', 'b']
+        if markers is None:
+            markers = [
+                default_markers[i % len(default_markers)]
+                for i in range(len(curve_y))
+            ]
+
+        for i in range(len(curve_y)):
+            print(curve_y[i])
+            # 绘制曲线
+            plt.plot(
+                curve_x[i],
+                curve_y[i],
+                color=colors[i],
+                linewidth=linewidth
+            )
+        for i in range(len(scatter_y)):
+            # 绘制点
+            plt.scatter(
+                scatter_x[i],
+                scatter_y[i],
+                color=default_colors[i],
+                marker=markers[i],
+                s=markersize ** 2,   # s 为面积
+            )
+
+        if legend_text is not None:
+            plt.legend(
+                labels=legend_text,
+                loc='best',
+                frameon=False,
+                fontsize=legend_size
+            )
+
+        plt.xlabel(self.label_x)
+        plt.ylabel(self.label_y)
+
+        # X 轴范围
+        if range_x is None:
+            plt.xlim(xmin=min(curve_x[0]), xmax=max(curve_x[0]))
+        else:
+            plt.xlim(xmin=range_x[0], xmax=range_x[1])
+
+        # Y 轴范围
+        if range_y is not None:
+            plt.ylim(ymin=range_y[0], ymax=range_y[1])
+
+        plt.grid(linestyle='--')
+
+        # Y 轴反转
+        if invert_yaxis:
+            plt.gca().invert_yaxis()
+
+        # 保存图片
+        plt.savefig(
+            self.path_image,
+            dpi=600
+        )
+        plt.close()
+
+
+    def bar_with_text(self, text, text_size, text_position):
+        '''
+        绘制单个柱状图
+        :param text:            文本内容
+        :param text_size:       文本字体大小
+        :param text_position:   文本相对位置，如：[0.2, 0.1]
+        :return:
+        '''
+        plt.bar(self.x, self.y, color='skyblue')
+        plt.xlabel('%s' % self.label_x)
+        plt.ylabel('%s' % self.label_y)
+        # 计算文本位置（使用中间的x坐标和y轴的上限）
+        # 获取当前坐标轴的范围
+        xlim = plt.xlim()
+        ylim = plt.ylim()
+        # 添加文本
+        if text is not None:
+            # 设置文本位置为右上角
+            text_x = xlim[1] - text_position[0] * (xlim[1] - xlim[0])
+            text_y = ylim[1] - text_position[1] * (ylim[1] - ylim[0])
+            plt.text(
+                text_x,
+                text_y,
+                text,
+                fontsize=text_size,
+                ha='left',
+                va='top'
+            )
+        plt.savefig(
+            # 文件路径+文件名
+            os.path.join(self.path_save, '%s.png' % self.file_name),
+            # @dpi 每英寸像素数，可以理解为清晰度或细腻度
+            dpi=600
+        )
+        plt.close()
+
+    def bar(
+            self,
+            x,
+            y,
+            title=None,
+            colors=None,
+            grid_axis='both'
+    ):
+        """
+        绘制双柱状图
+        :param x: list, X轴标签
+        :param y: list, Y轴数值
+        :param title: str, 标题
+        :param xlabel: str, X轴说明
+        :param ylabel: str, Y轴说明
+        :param colors: list or str, 柱子颜色
+        :param grid_axis: str, 网格线方向 ('x', 'y', 'both')
+        :param save_path: str, 如果提供路径则保存图片
+        """
+        x = self.to_numpy(x)
+        y = self.to_numpy(y)
+        # 1. 创建画布
+        fig, ax = plt.subplots(figsize=(7, 5))
+
+        # 2. 默认颜色设置
+        if colors is None:
+            colors = ['skyblue', 'lightcoral']
+
+        # 3. 绘制柱状图
+        # zorder=3 让柱子显示在网格线之上
+        bars = ax.bar(x, y, color=colors, width=0.5, zorder=3)
+
+        # 4. 设置网格线
+        # zorder=0 让网格线在底层
+        ax.grid(True, axis=grid_axis, linestyle=':', alpha=0.5, zorder=0)
+
+        # 5. 添加数值标签 (在柱子顶部显示数字)
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(
+                f'{height}',
+                xy=(bar.get_x() + bar.get_width() / 2, height),
+                xytext=(0, 3),  # 向上偏移3个点
+                textcoords="offset points",
+                ha='center',
+                va='bottom'
+            )
+        # 6. 装饰细节
+        if title is not None:
+            ax.set_title(title, fontsize=self.font_size, pad=15)
+        ax.set_xlabel(self.label_x)
+        ax.set_ylabel(self.label_y)
+        # 7. 保存或显示
+        plt.savefig(self.path_image, dpi=600)
+        plt.close()
+        print(f"图表已保存至: {self.path_image}")
+
+    def grouped_bar(
+            self,
+            categories,
+            data_dict,
+            title=None,
+            colors=None,
+            width=0.35,
+            show_values=True
+    ):
+        """
+        绘制多组对比柱状图
+        :param categories: X轴的类别标签列表，例如 ['A', 'B', 'C']
+        :param data_dict: 字典格式，Key为组名，Value为对应类别的数值列表。
+                          例如 {'Group1': [10, 20, 30], 'Group2': [15, 25, 35]}
+        :param title: 图表标题
+        :param colors: 颜色列表
+        :param width: 单个柱子的宽度
+        :param show_values: 是否在柱子顶部显示具体数值
+        """
+
+        # 1. 准备位置参数
+        x = np.arange(len(categories))  # 基础刻度位置 [0, 1, 2...]
+        n_groups = len(data_dict)  # 共有几组数据
+
+        # 计算每组柱子的起始偏移，确保它们居中对齐
+        # 如果有2组，偏移分别是 -width/2, +width/2
+        # 如果有3组，偏移分别是 -width, 0, +width
+        offsets = np.linspace(
+            -width * (n_groups - 1) / 2,
+            width * (n_groups - 1) / 2,
+            n_groups
+        )
+
+        fig, ax = plt.subplots()
+
+        # 2. 默认颜色
+        if colors is None:
+            colors = plt.cm.Paired(
+                np.linspace(0, 1, n_groups)
+            )
+
+        # 3. 循环绘制每一组
+        for i, (group_name, values) in enumerate(data_dict.items()):
+            rects = ax.bar(
+                x + offsets[i],
+                values,
+                width,
+                label=group_name,
+                color=colors[i],
+                zorder=3
+            )
+
+            # 是否显示数值标签
+            if show_values:
+                for rect in rects:
+                    height = rect.get_height()
+                    ax.annotate(
+                        f'{height}',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),
+                        textcoords="offset points",
+                        ha='center',
+                        va='bottom',
+                        fontsize=9
+                    )
+
+        # 4. 设置网格线 (zorder=0 确保网格在背景)
+        ax.grid(True, axis='both', linestyle='--', alpha=0.8, zorder=0)
+
+        # 5. 设置坐标轴和标签
+        if title is not None:
+            ax.set_title(title, fontsize=15, pad=20)
+        ax.set_xlabel(self.label_x)
+        ax.set_ylabel(self.label_y)
+        ax.set_xticks(x)
+        ax.set_xticklabels(categories)
+
+        # 6. 图例
+        ax.legend()
+
+        # 自动调整布局，防止元素重叠
+        plt.tight_layout()
+        plt.savefig(self.path_image, dpi=600)
+        plt.close()
+
+class PlotImage3D:
     def __init__(
             self,
             path,
@@ -182,7 +615,7 @@ class PltImage3D:
                 grid_x,
                 grid_y,
                 grid_z,
-                cmap='viridis',     # 颜色映射方案：viridis/plasma
+                cmap='plasma',      # 颜色映射方案：viridis/plasma
                 alpha=0.9,          # 曲面透明度
                 edgecolor='none',   # 定义网格线颜色，'none' 表示没有网格线
                 linewidth = 0,      # 网格线宽（0 表示不显示网格线）

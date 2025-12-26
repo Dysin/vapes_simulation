@@ -70,7 +70,7 @@ class PptUtils:
         tf = textbox.text_frame
         p = tf.add_paragraph()
         p.text = text
-        p.font.size = Pt(font_size)
+        p.font.font_size = Pt(font_size)
         p.font.bold = bold
         p.font.color.rgb = RGBColor(*color)
 

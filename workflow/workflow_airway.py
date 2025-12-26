@@ -19,8 +19,9 @@ from analysis.post_tecplot.starccm_post import vape_post
 from analysis.mesh_ansa.ansa_run import run_ansa
 from report.latex import ReportLatex
 from uq.doe import DOE
-from uq.surrogate_model import SurrogateModel
-from utils.images_utils import PltImage3D
+from uq.surrogate_model import SurrogateModelBasic
+from utils.images_utils import PlotImage3D
+from uq.gp_analysis import GPAnalyzer
 
 class WorkflowRANS(WorkflowAirwayAnalysisBase):
     def __init__(
@@ -432,7 +433,8 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
             bool_morph=True,
             bool_sim=True,
             bool_latex=True,
-            input_params_range=None,
+            bool_uq=True,
+            input_info=None,
             batch_id=1,
             sample_num=10,
             flow_rate=None,
@@ -440,10 +442,15 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
     ):
         r2 = 0
         case_names = []
+        var_names = []  # 变量名
+        var_ranges = [] # 变量上下界
+        for key, value in input_info.items():
+            var_names.append(key)
+            var_ranges.append(value)
         while r2 < 0.5 and batch_id < 10:
-            region_num = len(input_params_range)
+            region_num = len(var_ranges)
             if bool_doe:
-                doe = DOE(input_params_range, sample_num)
+                doe = DOE(var_ranges, sample_num)
                 data_input = doe.latin_hypercube_sampling()
                 csv_input = os.path.join(
                     self.pm.path_data,
@@ -494,18 +501,13 @@ class WorkflowRANS(WorkflowAirwayAnalysisBase):
                         report_folder=names['rans_spf']
                     )
 
-            # 代理模型
-            df_input, df_output = self.get_csv_params(flow_rate)
-            surrogate_model = SurrogateModel(df_input, df_output)
-            models, likelihoods, errors = surrogate_model.gaussian_process(0.1)
-            for i in range(len(models)):
-                print(f'[{i+1}/{len(models)}] Model')
-                print(f'{errors[i]}')
-                surrogate_model.plot_gp_surface(
-                    models[i],
-                    likelihoods[i],
-                    path=self.pm.path_images,
-                    output_idx=i
+            if bool_uq:
+                # 代理模型
+                df_input, df_output = self.get_csv_params(flow_rate)
+                gp_analyzer = GPAnalyzer(df_input, df_output)
+                gp_analyzer.workflow(
+                    path_image=self.pm.path_images,
+                    problem_params=input_info
                 )
             batch_id += 1
             sys.exit()
@@ -571,18 +573,18 @@ if __name__ == '__main__':
     #     [-0.2, -0.1],
     #     [-0.2, -0.1]
     # ] # 2025.12.09 am
-    input_params_range = [
-        [-0.6, -0.1],
-        [-0.1, 0.1],
-        [0.2, 0.5],
-        [-1.0, -0.5]
-    ] # 2025.12.09 pm
+
+    input_params_info = {
+        'Region1 delta R': (-0.2, -0.1),
+        'Region2 delta R': (0.1, 0.15),
+        'Region3 delta R': (-0.1, 0.1),
+    }
     workflow.spf_uq(
         bool_doe=False,
         bool_morph=False,
         bool_sim=False,
         bool_latex=False,
-        input_params_range=input_params_range,
+        input_info=input_params_info,
         batch_id=5,
         sample_num=10,
         flow_rate=22.5,

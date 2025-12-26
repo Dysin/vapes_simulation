@@ -14,10 +14,12 @@ class LatexUtils:
     def __init__(
             self,
             vape_name,
+            version_number,
             path,
             date=None
     ):
         self.vape_name = vape_name
+        self.ver_num = version_number
         self.date = date if date else r"\today"  # 默认为今天的日期
         self.content = ""  # 存放主体内容
         self.packages = []  # 存放需要使用的宏包
@@ -381,7 +383,7 @@ class LatexUtils:
         :param filename: 文件名，默认是 `report.tex`
         """
         if file_name is None:
-            file_name = f'{self.vape_name}_结构及气道仿真报告'
+            file_name = f'{self.vape_name}_{self.ver_num}_结构及气道仿真报告'
         file_tex = os.path.join(self.path, f'{file_name}.tex')
         with open(file_tex, "w", encoding="utf-8") as f:
             f.write(latex_code)

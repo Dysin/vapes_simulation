@@ -357,7 +357,7 @@ def iso_surface(
         contour_vars_and_levels,    # contour变量和范围
         user_views,                 # 视图位置
         variable,                   # iso surface的物理量
-        var_numbers,                # var_numbers[size(2)], 0: 第一个变量值; 1: 第二个变量值
+        var_numbers,                # var_numbers[font_size(2)], 0: 第一个变量值; 1: 第二个变量值
         iso_value,                  # iso变量值
         image_name='0',             # 图片编号区分名
         **kwargs

@@ -20,7 +20,7 @@ from numpy.linalg import cond
 import warnings
 warnings.filterwarnings("ignore")
 
-class BasicError():
+class ErrorBasic():
     '''
     基础误差指标：
     MAE / RMSE / MAPE / MaxError / R²
@@ -100,7 +100,7 @@ class BasicError():
         }
         return res
 
-class CrossValidation(BasicError):
+class CrossValidation(ErrorBasic):
     def __init__(self, y, y_pred):
         super().__init__(y, y_pred)
 

@@ -6,10 +6,19 @@
 import numpy as np
 from SALib.analyze import sobol
 from SALib.sample import saltelli
-from utils import Image
+from utils.images_utils import PlotImage2D
 
-class Sensitivity_Analysis:
+class SensitivityAnalyzer:
+    '''
+    敏感性分析器
+    适用于：小样本 Kriging / GPR 代理模型
+    '''
     def __init__(self, problem_params):
+        '''
+        trained surrogate model
+        :param model:
+        :param problem_params:
+        '''
         self.names = []
         ranges = []
         for key, value in problem_params.items():
@@ -38,39 +47,25 @@ class Sensitivity_Analysis:
         print(si['ST'])
         return si
 
-    def plt_image(self, path, file_name, si, text, text_size, text_position):
+    def plt_image(self, path, file_name, si):
         '''
         绘制敏感度柱状图
         :param path:            文件路径
         :param file_name:       文件名
         :param si:              sobol.analyze
-        :param text:            文本内容
-        :param text_size:       文本字体大小
-        :param text_position:   文本相对位置
         :return:
         '''
-        x_list = []
-        for i in range(len(self.names)):
-            x_list.append(f'P{(i+1):02d}')
-        image = Image(path, file_name, x_list, si['ST'], size=18)
-        image.plt_bar(text, text_size, text_position)
-
-if __name__ == '__main__':
-    geometry_params_input_ranges = {
-        '机身头部特征线首端点与x轴夹角': (40, 50),
-        '机身头部特征线首端点斜率系数': (0.6, 1.2),
-        '机身头部特征线末端点斜率系数': (0.6, 1.2),
-        '机身后部特征线首端点与y轴夹角': (10, 30),
-        '机身后部特征线末端点与x轴夹角': (5, 25),
-        '机身后部特征线首端点斜率系数': (0.8, 1.1),
-        '机身后部特征线末端点斜率系数': (0.8, 1.1),
-        '机身侧向特征线1中点位置': (0.4, 0.55),
-        '机身前部特征线相对长度Lower': (0.06, 0.12),
-        '机身底部相对高度Lower': (0.03, 0.06),
-        '机身底部后段相对长度Lower': (0.2, 0.25),
-        '机身尾部特征线宽度系数Upper': (0.02, 0.04),
-        '机身尾部特征线末端点与y轴夹角Upper': (5, 25),
-        '机身横截面特征线1底部相对宽度Lower': (0.01, 0.03)
-    }
-    si = Sensitivity_Analysis(geometry_params_input_ranges)
-    print(si.problem)
+        y_dict = {
+            'S1': si['S1'],
+            'ST': si['ST'],
+        }
+        plt_image = PlotImage2D(
+            path,
+            file_name,
+            font_size=10
+        )
+        plt_image.grouped_bar(
+            categories=self.names,
+            data_dict=y_dict,
+            show_values=False
+        )

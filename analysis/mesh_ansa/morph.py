@@ -10,7 +10,7 @@ from ansa_utils import *
 
 def str_to_list(str, scale = 1000):
     s_clean = str.strip('[]')  # 去除方括号
-    result = [(float(num) * scale) for num in s_clean.split()]  # 分割并转换为float
+    result = [(float(num) * scale) for num in s_clean.data_split()]  # 分割并转换为float
     return result
 
 def output_mesh(path, mesh_name):
